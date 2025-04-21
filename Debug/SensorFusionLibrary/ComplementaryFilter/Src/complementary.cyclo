@@ -1,0 +1,2 @@
+../SensorFusionLibrary/ComplementaryFilter/Src/complementary.c:9:6:Complementary_Init	8
+../SensorFusionLibrary/ComplementaryFilter/Src/complementary.c:37:6:Complementary_Update	8

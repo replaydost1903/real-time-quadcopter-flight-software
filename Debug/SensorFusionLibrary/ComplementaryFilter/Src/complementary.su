@@ -1,0 +1,2 @@
+../SensorFusionLibrary/ComplementaryFilter/Src/complementary.c:9:6:Complementary_Init	40	static
+../SensorFusionLibrary/ComplementaryFilter/Src/complementary.c:37:6:Complementary_Update	88	static
