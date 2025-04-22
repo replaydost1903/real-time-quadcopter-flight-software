@@ -5,8 +5,6 @@ extern struct bmp388_interface bmp388_intf;
 
 static volatile uint32_t counter = 0U;
 
-
-
 BMP3_INTF_RET_TYPE bmp388_read(uint8_t reg_addr, uint8_t *read_data, uint32_t len, void *intf_ptr)
 {
 	struct bmp388_interface *intf = (struct bmp388_interface *)intf_ptr;
@@ -21,19 +19,19 @@ BMP3_INTF_RET_TYPE bmp388_write(uint8_t reg_addr, const uint8_t *read_data, uint
 	return ( BMP3_INTF_RET_SUCCESS );
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if ( htim == NULL )
-	{
-		Error_Handler();
-	}
-
-	if ( htim->Instance == (TIM_TypeDef*)(bmp388_intf.htim->Instance) )
-	{
-		++counter;
-	}
-
-}
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+//{
+//	if ( htim == NULL )
+//	{
+//		Error_Handler();
+//	}
+//
+//	if ( htim->Instance == (TIM_TypeDef*)(bmp388_intf.htim->Instance) )
+//	{
+//		++counter;
+//	}
+//
+//}
 
 void delay_us(uint32_t period, void *intf_ptr)
 {
@@ -124,6 +122,22 @@ BMP3_INTF_RET_TYPE init_bmp388_sensor_driver_interface(struct bmp3_dev *bmp388,s
 	return ( BMP3_INTF_RET_SUCCESS );
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

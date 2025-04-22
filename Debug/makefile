@@ -9,6 +9,9 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include ThirdParty/FreeRTOS/Source/portable/MemMang/subdir.mk
+-include ThirdParty/FreeRTOS/Source/portable/GCC/ARM_CM4F/subdir.mk
+-include ThirdParty/FreeRTOS/Source/subdir.mk
 -include SensorLibrary/bmp388/bmp388_selftest/Src/subdir.mk
 -include SensorLibrary/bmp388/bmp388_port/Src/subdir.mk
 -include SensorLibrary/bmp388/Src/subdir.mk
@@ -68,7 +71,7 @@ main-build: Real_Time_Flight_Stabilization.elf secondary-outputs
 
 # Tool invocations
 Real_Time_Flight_Stabilization.elf Real_Time_Flight_Stabilization.map: $(OBJS) $(USER_OBJS) C:\Users\Kubilay\Desktop\quadcopter_project\Software\Real_Time_Fligth_Stabilization\Real_Time_Flight_Stabilization\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Real_Time_Flight_Stabilization.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Kubilay\Desktop\quadcopter_project\Software\Real_Time_Fligth_Stabilization\Real_Time_Flight_Stabilization\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Real_Time_Flight_Stabilization.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "Real_Time_Flight_Stabilization.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Kubilay\Desktop\quadcopter_project\Software\Real_Time_Fligth_Stabilization\Real_Time_Flight_Stabilization\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Real_Time_Flight_Stabilization.map" -Wl,--gc-sections -static -L"C:\Users\Kubilay\Desktop\quadcopter_project\Software\Real_Time_Fligth_Stabilization\Real_Time_Flight_Stabilization\Drivers\CMSIS\Lib\GCC" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

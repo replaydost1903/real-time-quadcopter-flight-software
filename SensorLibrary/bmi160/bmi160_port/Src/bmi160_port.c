@@ -30,7 +30,7 @@ int8_t bmi160_i2c_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *data, uint16
 }
 void delay_ms(uint32_t period)
 {
-	HAL_Delay(period);
+	HAL_Delay(period);		//Systick yerine TIM6 olacak
 }
 
 int8_t init_bmi160_sensor_driver_interface(struct bmi160_dev *bmi160)

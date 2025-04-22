@@ -1,4 +1,4 @@
-../SensorLibrary/bmp388/bmp388_selftest/Src/bmp3_selftest.c:104:8:bmp3_selftest_check	56	static
+../SensorLibrary/bmp388/bmp388_selftest/Src/bmp3_selftest.c:104:8:bmp3_selftest_check	64	static
 ../SensorLibrary/bmp388/bmp388_selftest/Src/bmp3_selftest.c:186:15:analyze_sensor_data	24	static
 ../SensorLibrary/bmp388/bmp388_selftest/Src/bmp3_selftest.c:209:15:validate_trimming_param	48	static
 ../SensorLibrary/bmp388/bmp388_selftest/Src/bmp3_selftest.c:240:15:cal_crc	24	static

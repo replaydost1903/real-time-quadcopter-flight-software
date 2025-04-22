@@ -32,4 +32,7 @@ SensorLibrary/bmi160/bmi160_port/Src \
 SensorLibrary/bmp388/Src \
 SensorLibrary/bmp388/bmp388_port/Src \
 SensorLibrary/bmp388/bmp388_selftest/Src \
+ThirdParty/FreeRTOS/Source \
+ThirdParty/FreeRTOS/Source/portable/GCC/ARM_CM4F \
+ThirdParty/FreeRTOS/Source/portable/MemMang \
 

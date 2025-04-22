@@ -831,6 +831,9 @@ struct bmp3_data
 
     /*! Compensated pressure */
     double pressure;
+
+    /*! Compensated altitude */
+    double altitude;
 };
 
 #else
