@@ -1,4 +1,9 @@
 ../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:8:20:bmp388_read	1
 ../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:15:20:bmp388_write	1
-../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:36:6:delay_us	2
-../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:49:20:init_bmp388_sensor_driver_interface	6
+../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:22:6:delay_us	2
+../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:35:6:HAL_TIM_PeriodElapsedCallback	3
+../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:49:20:init_bmp388_sensor_driver_interface	7
+../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:125:20:get_bmp388_sensor_data	8
+../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:173:20:calibration_bmp388_sensor	6
+../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:206:20:get_bmp388_altitude_data	3
+../SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.c:231:8:median_filter	2

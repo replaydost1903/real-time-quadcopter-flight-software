@@ -41,7 +41,7 @@ int8_t init_bmi160_sensor_driver_interface(struct bmi160_dev *bmi160)
 	  Error_Handler();
 	}
 
-	#if ( ( BMI160_I2C_INTERFACE) && ( !BMI160_SPI_INTERFACE ) )
+#if ( ( BMI160_I2C_INTERFACE) && ( !BMI160_SPI_INTERFACE ) )
 
 	int8_t rslt;
 

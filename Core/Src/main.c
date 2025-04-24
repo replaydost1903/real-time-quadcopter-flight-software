@@ -18,9 +18,12 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
+#include <stdio.h>
 #include "complementary.h"
 #include "bmi160.h"
 #include "bmi160_port.h"
@@ -28,8 +31,12 @@
 #include "bmp3_selftest.h"
 #include "bmp388_port.h"
 #include "pid.h"
-#include "FreeRTOS.h"
-//#include "arm_math.h"
+#include "usbd_cdc_if.h"
+#include "flight_stabilization_loop.h"
+#include "rtwtypes.h"
+//#include "FreeRTOS.h"
+//#include "task.h"
+//#include "task_handles.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,7 +48,6 @@
 /* USER CODE BEGIN PD */
 #define ACCEL_SENSITIVITY		( ( double )( 2048.0f ) )
 #define GYRO_SENSITIVITY		( ( double )( 16.4f) )
-#define SEA_LEVEL_PRESSURE 		( ( double )( 101325.0f ) )
 #define ALPHA					( ( double )( 0.1f ) )
 /* USER CODE END PD */
 
@@ -59,16 +65,31 @@ TIM_HandleTypeDef htim6;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-struct bmi160_dev bmi160 = {0};						/*! @brief variable to hold the bmi160 main data 			*/
-struct complementary bmi160_comp = {0};				/*! @brief variable to hold the bmi160 complementary filter */
-struct bmi160_sensor_data bmi160_accel = {0};		/*! @brief variable to hold the bmi160 accel data 			*/
-struct bmi160_sensor_data bmi160_gyro = {0};		/*! @brief variable to hold the bmi160 gyro data 			*/
-volatile int8_t rslt = 0U;							/*! @brief variable to hold the bmi160 function return data */
 
-struct bmp3_dev bmp388 = {0};
-struct bmp3_data data = {0};
-struct bmp3_status status = { { 0 } };
-struct bmp388_interface bmp388_intf = { &htim6 , &hi2c2, 0x76 };
+/**
+  * @brief  BMI160 IMU Sensor Data Types
+  */
+struct complementary bmi160_comp = {0};
+struct bmi160_dev bmi160 = {0};													/*! 	@brief variable to hold the bmi160 main data 		*/
+struct bmi160_sensor_data bmi160_accel = {0};									/*! 	@brief variable to hold the bmi160 accel data 		*/
+struct bmi160_sensor_data bmi160_gyro = {0};									/*! 	@brief variable to hold the bmi160 gyro data 		*/
+struct bmp160_interface bmi160_intf = {0};			/*! 	@brief variable to hold the bmi160 interface 		*/
+
+/**
+  * @brief  BMP388 Pressure Sensor Data Types
+  */
+struct bmp3_dev bmp388 = {0};						/*! 	@brief variable to hold the bmp388 main data 		*/
+struct bmp3_data bmp388_data = {0};					/*!	 	@brief variable to hold the bmp388 pressure data 	*/
+struct bmp388_interface bmp388_intf = {&htim6,&hi2c2,BMP388_DEV_ADDR};			/*! 	@brief variable to hold the bmp388 interface 		*/
+
+
+//TaskHandle_t task1_handle,task2_handle,task3_handle,task4_handle,task5_handle;
+char usb_ch;
+int flag=0;
+char buffer1[] = "You sent 1,get 1 back\r\n";
+char buffer2[] = "You sent 2,get 2 back\r\n";
+char buffer3[] = "You sent 3,get 3 back\r\n";
+double sum=0.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -84,7 +105,12 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+double pitch;
+double roll;
+double yaw;
+double x;
+double y;
+double z;
 /* USER CODE END 0 */
 
 /**
@@ -120,15 +146,54 @@ int main(void)
   MX_I2C2_Init();
   MX_TIM6_Init();
   MX_USART2_UART_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
   /*!< BMI160 Init Process >!*/
-  Complementary_Init(&bmi160_comp, 0.7f, 50.0f);
-  init_bmi160_sensor_driver_interface(&bmi160);
+  //Complementary_Init(&bmi160_comp, 0.7f, 50.0f);
+  //init_bmi160_sensor_driver_interface(&bmi160);
 
   /*!< BMP388 Init Process >!*/
   init_bmp388_sensor_driver_interface(&bmp388,&bmp388_intf);
 
+  /*!< Segger System View Init >!*/
+//  DWT->CTRL |= (1 << 0);
+//
+//  SEGGER_SYSVIEW_Conf();
+//
+//  SEGGER_SYSVIEW_Start();
+//
+//  /*!< FreeRTOS Task Creation >!*/
+//  configASSERT(xTaskCreate(vTask1, "Task-1", (uint16_t)496, NULL, 3U, &task1_handle));
+//  configASSERT(xTaskCreate(vTask2, "Task-2", (uint16_t)496, NULL, 3U, &task2_handle));
+//  configASSERT(xTaskCreate(vTask3, "Task-3", (uint16_t)496, NULL, 3U, &task3_handle));
+//  configASSERT(xTaskCreate(vTask4, "Task-4", (uint16_t)496, NULL, 3U, &task4_handle));
+//  configASSERT(xTaskCreate(vTask5, "Task-5", (uint16_t)496, NULL, 3U, &task5_handle));
+
+  /* Start the scheduler so the tasks start executing. */
+  //vTaskStartScheduler();
+
+  /*
+  * If all is well main() will not reach here because the scheduler will now
+  * be running the created tasks. If main() does reach here then there was
+  * not enough heap memory to create either the idle or timer tasks
+  * (described later in this book). Chapter 3 provides more information on
+  * heap memory management.
+  */
+  //printf("Not enough heap memory !\n");
+  //Error_Handler();
+    char text[100];
+//  uint8_t i=0;
+//
+//  rtU.w1=200;
+//  rtU.w2=200;
+//  rtU.w3=50;
+//  rtU.w4=500;
+//
+//  SCB->CPACR |= (0xF << 20); // CP10 ve CP11'i full erişim (11) yap
+//
+//  flight_stabilization_loop_initialize();
+//  int count=0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -138,6 +203,50 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+//	  while (i++<5)
+//	  {
+//		  if ( get_bmp388_sensor_data(&bmp388,&bmp388_data) != BMP3_OK  )
+//		  {
+//			  Error_Handler();
+//		  }
+//
+//		  if ( get_bmp388_altitude_data(&bmp388_data) != BMP3_OK )
+//		  {
+//			  Error_Handler();
+//		  }
+//
+//		  sum += bmp388_data.altitude[2];
+//
+//		  HAL_Delay(20);
+//	  }
+//
+//	  sum /= i;
+//	  i=0;
+
+//	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
+//	  {
+//		  HAL_Delay(10);
+//		  while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0));
+//		  count^=1;
+//	  }
+//
+//	  if(count)
+//	  {
+//		  flight_stabilization_loop_step();
+//
+//		  HAL_Delay(1000);
+//		  sprintf(text,"yaw = %f\t\n",yaw);
+//		  CDC_Transmit_FS((uint8_t*)text, strlen(text));
+//	  }
+
+
+//	  sum=0.0f;
+
+	  calibration_bmp388_sensor(&bmp388, &bmp388_data, 50U);
+	  sprintf(text,"reference %f\t\n",bmp388_data.altitude[1]);
+	  CDC_Transmit_FS((uint8_t*)text, strlen(text));
+	  HAL_Delay(200);
   }
   /* USER CODE END 3 */
 }
@@ -166,7 +275,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLM = 4;
   RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -372,28 +481,6 @@ int _write(int file, char *ptr, int len)
   return len;
 }
 /* USER CODE END 4 */
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM7 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM7)
-  {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-
-  /* USER CODE END Callback 1 */
-}
 
 /**
   * @brief  This function is executed in case of error occurrence.

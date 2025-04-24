@@ -25,14 +25,18 @@ SUBDIRS := \
 ControllerDriver/pid/Src \
 Core/Src \
 Core/Startup \
+Drivers/FlightStabilizationCode \
 Drivers/STM32F4xx_HAL_Driver/Src \
+FlightInterfaceParser/Src \
+FligthControl/Src \
+Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src \
+Middlewares/ST/STM32_USB_Device_Library/Core/Src \
 SensorFusionLibrary/ComplementaryFilter/Src \
 SensorLibrary/bmi160/Src \
 SensorLibrary/bmi160/bmi160_port/Src \
 SensorLibrary/bmp388/Src \
 SensorLibrary/bmp388/bmp388_port/Src \
 SensorLibrary/bmp388/bmp388_selftest/Src \
-ThirdParty/FreeRTOS/Source \
-ThirdParty/FreeRTOS/Source/portable/GCC/ARM_CM4F \
-ThirdParty/FreeRTOS/Source/portable/MemMang \
+USB_DEVICE/App \
+USB_DEVICE/Target \
 

@@ -8,6 +8,13 @@
 
 extern int8_t init_bmi160_sensor_driver_interface(struct bmi160_dev *bmi160);
 
+struct bmp160_interface
+{
+	TIM_HandleTypeDef *htim;
+    I2C_HandleTypeDef *hi2c;
+    uint8_t dev_addr;
+};
+
 /*
  *  local macro definitions
  */

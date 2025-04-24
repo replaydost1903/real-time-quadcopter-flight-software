@@ -1,0 +1,4 @@
+../Drivers/FlightStabilizationCode/flight_stabilization_loop.c:62:13:rt_ertODEUpdateContinuousStates	6
+../Drivers/FlightStabilizationCode/flight_stabilization_loop.c:140:6:flight_stabilization_loop_step	16
+../Drivers/FlightStabilizationCode/flight_stabilization_loop.c:447:6:flight_stabilization_loop_derivatives	97
+../Drivers/FlightStabilizationCode/flight_stabilization_loop.c:606:6:flight_stabilization_loop_initialize	1
