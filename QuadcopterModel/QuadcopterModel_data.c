@@ -1,11 +1,11 @@
 /*
- * File: flight_stabilization_loop_data.c
+ * File: QuadcopterModel_data.c
  *
- * Code generated for Simulink model 'flight_stabilization_loop'.
+ * Code generated for Simulink model 'QuadcopterModel'.
  *
- * Model version                  : 1.2
+ * Model version                  : 1.3
  * Simulink Coder version         : 23.2 (R2023b) 01-Aug-2023
- * C/C++ source code generated on : Thu Apr 24 02:09:04 2025
+ * C/C++ source code generated on : Thu Apr 24 19:04:42 2025
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -15,7 +15,7 @@
  * Validation result: Not run
  */
 
-#include "flight_stabilization_loop.h"
+#include "QuadcopterModel.h"
 
 /* Constant parameters (default storage) */
 const ConstP rtConstP = {

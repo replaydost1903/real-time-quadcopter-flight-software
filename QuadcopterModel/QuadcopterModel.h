@@ -1,11 +1,11 @@
 /*
- * File: flight_stabilization_loop.h
+ * File: QuadcopterModel.h
  *
- * Code generated for Simulink model 'flight_stabilization_loop'.
+ * Code generated for Simulink model 'QuadcopterModel'.
  *
- * Model version                  : 1.2
+ * Model version                  : 1.3
  * Simulink Coder version         : 23.2 (R2023b) 01-Aug-2023
- * C/C++ source code generated on : Thu Apr 24 02:09:04 2025
+ * C/C++ source code generated on : Thu Apr 24 19:04:42 2025
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -15,14 +15,14 @@
  * Validation result: Not run
  */
 
-#ifndef RTW_HEADER_flight_stabilization_loop_h_
-#define RTW_HEADER_flight_stabilization_loop_h_
-#ifndef flight_stabilization_loop_COMMON_INCLUDES_
-#define flight_stabilization_loop_COMMON_INCLUDES_
+#ifndef RTW_HEADER_QuadcopterModel_h_
+#define RTW_HEADER_QuadcopterModel_h_
+#ifndef QuadcopterModel_COMMON_INCLUDES_
+#define QuadcopterModel_COMMON_INCLUDES_
 #include "rtwtypes.h"
 #include "rtw_continuous.h"
 #include "rtw_solver.h"
-#endif                          /* flight_stabilization_loop_COMMON_INCLUDES_ */
+#endif                                 /* QuadcopterModel_COMMON_INCLUDES_ */
 
 #include <string.h>
 
@@ -129,8 +129,12 @@ typedef struct {
 
 /* External outputs (root outports fed by signals with default storage) */
 typedef struct {
-  real_T zeta[3];                      /* '<Root>/zeta' */
-  real_T eta[3];                       /* '<Root>/eta' */
+  real_T x;                            /* '<Root>/x' */
+  real_T y;                            /* '<Root>/y' */
+  real_T z;                            /* '<Root>/z' */
+  real_T roll;                         /* '<Root>/roll' */
+  real_T pitch;                        /* '<Root>/pitch' */
+  real_T yaw;                          /* '<Root>/yaw' */
 } ExtY;
 
 /* Real-time Model Data Structure */
@@ -197,8 +201,8 @@ extern ExtY rtY;
 extern const ConstP rtConstP;
 
 /* Model entry point functions */
-extern void flight_stabilization_loop_initialize(void);
-extern void flight_stabilization_loop_step(void);
+extern void QuadcopterModel_initialize(void);
+extern void QuadcopterModel_step(void);
 
 /* Real-time Model object */
 extern RT_MODEL *const rtM;
@@ -217,16 +221,16 @@ extern RT_MODEL *const rtM;
  *
  * Here is the system hierarchy for this model
  *
- * '<Root>' : 'flight_stabilization_loop'
- * '<S1>'   : 'flight_stabilization_loop/R-Dynamics'
- * '<S2>'   : 'flight_stabilization_loop/T-Dynamics'
- * '<S3>'   : 'flight_stabilization_loop/R-Dynamics/MATLAB Function'
- * '<S4>'   : 'flight_stabilization_loop/R-Dynamics/Subsystem2'
- * '<S5>'   : 'flight_stabilization_loop/T-Dynamics/Subsystem1'
- * '<S6>'   : 'flight_stabilization_loop/T-Dynamics/Subsystem2'
- * '<S7>'   : 'flight_stabilization_loop/T-Dynamics/Subsystem3'
+ * '<Root>' : 'QuadcopterModel'
+ * '<S1>'   : 'QuadcopterModel/R-Dynamics'
+ * '<S2>'   : 'QuadcopterModel/T-Dynamics'
+ * '<S3>'   : 'QuadcopterModel/R-Dynamics/MATLAB Function'
+ * '<S4>'   : 'QuadcopterModel/R-Dynamics/Subsystem2'
+ * '<S5>'   : 'QuadcopterModel/T-Dynamics/Subsystem1'
+ * '<S6>'   : 'QuadcopterModel/T-Dynamics/Subsystem2'
+ * '<S7>'   : 'QuadcopterModel/T-Dynamics/Subsystem3'
  */
-#endif                             /* RTW_HEADER_flight_stabilization_loop_h_ */
+#endif                                 /* RTW_HEADER_QuadcopterModel_h_ */
 
 /*
  * File trailer for generated code.

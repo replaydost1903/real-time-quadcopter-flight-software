@@ -67,10 +67,6 @@ void Error_Handler(void);
 #define RS232_TX_GPIO_Port GPIOA
 #define RS232_RX_Pin GPIO_PIN_3
 #define RS232_RX_GPIO_Port GPIOA
-#define BMP388_SCL_Pin GPIO_PIN_10
-#define BMP388_SCL_GPIO_Port GPIOB
-#define BMP388_SDA_Pin GPIO_PIN_11
-#define BMP388_SDA_GPIO_Port GPIOB
 #define GREEN_LED_Pin GPIO_PIN_12
 #define GREEN_LED_GPIO_Port GPIOD
 #define ORANGE_LED_Pin GPIO_PIN_13

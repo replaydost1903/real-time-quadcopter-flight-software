@@ -25,13 +25,14 @@ SUBDIRS := \
 ControllerDriver/pid/Src \
 Core/Src \
 Core/Startup \
-Drivers/FlightStabilizationCode \
 Drivers/STM32F4xx_HAL_Driver/Src \
 FlightInterfaceParser/Src \
 FligthControl/Src \
 Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src \
+QuadcopterModel \
 SensorFusionLibrary/ComplementaryFilter/Src \
+SensorLibrary/HMC5883L/Src \
 SensorLibrary/bmi160/Src \
 SensorLibrary/bmi160/bmi160_port/Src \
 SensorLibrary/bmp388/Src \

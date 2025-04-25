@@ -1,0 +1,4 @@
+../QuadcopterModel/QuadcopterModel.c:62:13:rt_ertODEUpdateContinuousStates	128	static
+../QuadcopterModel/QuadcopterModel.c:140:6:QuadcopterModel_step	440	static
+../QuadcopterModel/QuadcopterModel.c:461:6:QuadcopterModel_derivatives	24	static
+../QuadcopterModel/QuadcopterModel.c:620:6:QuadcopterModel_initialize	4	static

@@ -1,11 +1,11 @@
 /*
- * File: flight_stabilization_loop.c
+ * File: QuadcopterModel.c
  *
- * Code generated for Simulink model 'flight_stabilization_loop'.
+ * Code generated for Simulink model 'QuadcopterModel'.
  *
- * Model version                  : 1.2
+ * Model version                  : 1.3
  * Simulink Coder version         : 23.2 (R2023b) 01-Aug-2023
- * C/C++ source code generated on : Thu Apr 24 02:09:04 2025
+ * C/C++ source code generated on : Thu Apr 24 19:04:42 2025
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -15,7 +15,7 @@
  * Validation result: Not run
  */
 
-#include "flight_stabilization_loop.h"
+#include "QuadcopterModel.h"
 #include <math.h>
 #include <string.h>
 #include "rtwtypes.h"
@@ -53,7 +53,7 @@ static RT_MODEL rtM_;
 RT_MODEL *const rtM = &rtM_;
 
 /* private model entry point functions */
-extern void flight_stabilization_loop_derivatives(void);
+extern void QuadcopterModel_derivatives(void);
 
 /*
  * This function updates continuous states using the ODE3 fixed-step
@@ -95,7 +95,7 @@ static void rt_ertODEUpdateContinuousStates(RTWSolverInfo *si )
   /* Assumes that rtsiSetT and ModelOutputs are up-to-date */
   /* f0 = f(t,y) */
   rtsiSetdX(si, f0);
-  flight_stabilization_loop_derivatives();
+  QuadcopterModel_derivatives();
 
   /* f(:,2) = feval(odefile, t + hA(1), y + f*hB(:,1), args(:)(*)); */
   hB[0] = h * rt_ODE3_B[0][0];
@@ -105,8 +105,8 @@ static void rt_ertODEUpdateContinuousStates(RTWSolverInfo *si )
 
   rtsiSetT(si, t + h*rt_ODE3_A[0]);
   rtsiSetdX(si, f1);
-  flight_stabilization_loop_step();
-  flight_stabilization_loop_derivatives();
+  QuadcopterModel_step();
+  QuadcopterModel_derivatives();
 
   /* f(:,3) = feval(odefile, t + hA(2), y + f*hB(:,2), args(:)(*)); */
   for (i = 0; i <= 1; i++) {
@@ -119,8 +119,8 @@ static void rt_ertODEUpdateContinuousStates(RTWSolverInfo *si )
 
   rtsiSetT(si, t + h*rt_ODE3_A[1]);
   rtsiSetdX(si, f2);
-  flight_stabilization_loop_step();
-  flight_stabilization_loop_derivatives();
+  QuadcopterModel_step();
+  QuadcopterModel_derivatives();
 
   /* tnew = t + hA(3);
      ynew = y + f*hB(:,3); */
@@ -137,7 +137,7 @@ static void rt_ertODEUpdateContinuousStates(RTWSolverInfo *si )
 }
 
 /* Model step function */
-void flight_stabilization_loop_step(void)
+void QuadcopterModel_step(void)
 {
   real_T b_x[9];
   real_T x[9];
@@ -237,11 +237,7 @@ void flight_stabilization_loop_step(void)
      *  Integrator: '<S1>/Integrator3'
      *  Integrator: '<S1>/Integrator4'
      */
-    Integrator2_CSTATE = (Integrator2_CSTATE + rtb_Tri5) + rtb_Product6;
-    rtb_Add[i] = Integrator2_CSTATE;
-
-    /* Outport: '<Root>/eta' */
-    rtY.eta[i] = Integrator2_CSTATE;
+    rtb_Add[i] = (Integrator2_CSTATE + rtb_Tri5) + rtb_Product6;
 
     /* Integrator: '<S1>/Integrator' */
     Integrator2_CSTATE = rtX.Integrator_CSTATE_g[i];
@@ -303,6 +299,15 @@ void flight_stabilization_loop_step(void)
   rtDW.Sum1[1] = (rtb_Product6 * Integrator * t2 - rtb_Tri5 * Integrator_0) *
     rtb_Divide1 - rtb_Divide2[1];
   rtDW.Sum1[2] = (Integrator2_CSTATE * t2 * rtb_Divide1 - 9.81) - rtb_Divide2[2];
+
+  /* Outport: '<Root>/roll' */
+  rtY.roll = rtb_Add[0];
+
+  /* Outport: '<Root>/pitch' */
+  rtY.pitch = rtb_Add[1];
+
+  /* Outport: '<Root>/yaw' */
+  rtY.yaw = rtb_Add[2];
 
   /* MATLAB Function: '<S1>/MATLAB Function' incorporates:
    *  Gain: '<S4>/Gain1'
@@ -396,29 +401,38 @@ void flight_stabilization_loop_step(void)
   x[p3] = -(0.0 * t2 + b_x[6] * rtb_Divide1) / 0.004856;
   x[p3 + 1] = t2;
   x[p3 + 2] = rtb_Divide1;
-  rtb_Divide1 = rtDW.Integrator_c[0];
-  t2 = rtDW.Integrator_c[1];
-  Integrator = rtDW.Integrator_c[2];
+  t2 = rtDW.Integrator_c[0];
+  Integrator = rtDW.Integrator_c[1];
+  Integrator_0 = rtDW.Integrator_c[2];
   rtb_Divide2[0] = (rtU.w4 - rtU.w2) * 6.705E-7;
   rtb_Divide2[1] = (rtU.w3 - rtU.w1) * 6.705E-7;
   rtb_Divide2[2] = (((rtU.w2 - rtU.w1) - rtU.w3) + rtU.w4) * 1.14E-7;
   for (i = 0; i < 3; i++) {
-    rtb_Add[i] = rtb_Divide2[i] - ((y[i + 3] * t2 + y[i] * rtb_Divide1) + y[i +
-      6] * Integrator);
+    rtb_Add[i] = rtb_Divide2[i] - ((y[i + 3] * Integrator + y[i] * t2) + y[i + 6]
+      * Integrator_0);
   }
 
-  rtb_Divide1 = rtb_Add[1];
-  t2 = rtb_Add[0];
-  Integrator = rtb_Add[2];
+  t2 = rtb_Add[1];
+  Integrator = rtb_Add[0];
+  Integrator_0 = rtb_Add[2];
   for (i = 0; i < 3; i++) {
-    rtDW.out[i] = (x[i + 3] * rtb_Divide1 + x[i] * t2) + x[i + 6] * Integrator;
-
-    /* Outport: '<Root>/zeta' incorporates:
-     *  Integrator: '<S2>/Integrator1'
-     */
-    rtY.zeta[i] = rtX.Integrator1_CSTATE[i];
+    rtDW.out[i] = (x[i + 3] * t2 + x[i] * Integrator) + x[i + 6] * Integrator_0;
   }
 
+  /* Outport: '<Root>/x' incorporates:
+   *  Integrator: '<S2>/Integrator1'
+   */
+  rtY.x = rtX.Integrator1_CSTATE[0];
+
+  /* Outport: '<Root>/y' incorporates:
+   *  Integrator: '<S2>/Integrator1'
+   */
+  rtY.y = rtX.Integrator1_CSTATE[1];
+
+  /* Outport: '<Root>/z' incorporates:
+   *  Integrator: '<S2>/Integrator1'
+   */
+  rtY.z = rtX.Integrator1_CSTATE[2];
   if (rtmIsMajorTimeStep(rtM)) {
     rt_ertODEUpdateContinuousStates(&rtM->solverInfo);
 
@@ -444,7 +458,7 @@ void flight_stabilization_loop_step(void)
 }
 
 /* Derivatives for root system: '<Root>' */
-void flight_stabilization_loop_derivatives(void)
+void QuadcopterModel_derivatives(void)
 {
   XDot *_rtXdot;
   boolean_T lsat;
@@ -603,7 +617,7 @@ void flight_stabilization_loop_derivatives(void)
 }
 
 /* Model initialize function */
-void flight_stabilization_loop_initialize(void)
+void QuadcopterModel_initialize(void)
 {
   /* Registration code */
   {

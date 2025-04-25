@@ -17,6 +17,6 @@ struct complementary
 
 extern void Complementary_Init(struct complementary *pComp,double alpha,double sampling_time);
 extern void Complementary_Update(struct complementary *pComp,\
-						double ax,double ay,double az,double gx,double gy,double gz);
+						double ax,double ay,double az,double gx,double gy,double gz,double mx,double my,double mz);
 
 #endif
