@@ -31,7 +31,9 @@ FligthControl/Src \
 Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src \
 QuadcopterModel \
+RCFilter/Src \
 SensorFusionLibrary/ComplementaryFilter/Src \
+SensorFusionLibrary/MadgwickAHRS/Src \
 SensorLibrary/HMC5883L/Src \
 SensorLibrary/bmi160/Src \
 SensorLibrary/bmi160/bmi160_port/Src \

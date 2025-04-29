@@ -1,4 +1,0 @@
-../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:19:8:bmi160_i2c_write	32	static
-../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:25:8:bmi160_i2c_read	32	static
-../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:31:6:delay_ms	16	static
-../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:36:8:init_bmi160_sensor_driver_interface	40	static

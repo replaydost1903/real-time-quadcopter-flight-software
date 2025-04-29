@@ -1,4 +1,5 @@
 #include "bmi160_port.h"
+#include "bmi160_defs.h"
 
 extern I2C_HandleTypeDef hi2c1;
 
@@ -33,7 +34,7 @@ void delay_ms(uint32_t period)
 	HAL_Delay(period);		//Systick yerine TIM6 olacak
 }
 
-int8_t init_bmi160_sensor_driver_interface(struct bmi160_dev *bmi160)
+int8_t bmi160_interface_init(struct bmi160_dev *bmi160)
 {
 	/*<! Check null-pointer  <!*/
 	if( bmi160 == NULL )
@@ -91,7 +92,7 @@ int8_t init_bmi160_sensor_driver_interface(struct bmi160_dev *bmi160)
 
 	/* Select the Output data rate, range of accelerometer sensor */
 	bmi160->accel_cfg.odr = BMI160_ACCEL_ODR_1600HZ;
-	bmi160->accel_cfg.range = BMI160_ACCEL_RANGE_16G;
+	bmi160->accel_cfg.range = BMI160_ACCEL_RANGE_2G;
 	bmi160->accel_cfg.bw = BMI160_ACCEL_BW_NORMAL_AVG4;
 
 	/* Select the power mode of accelerometer sensor */
@@ -131,7 +132,7 @@ int8_t init_bmi160_sensor_driver_interface(struct bmi160_dev *bmi160)
 
 	bmi160_foc.acc_off_en = BMI160_ENABLE;
 	bmi160_foc.gyro_off_en = BMI160_ENABLE;
-	bmi160_foc.foc_gyr_en = BMI160_FOC_ACCEL_POSITIVE_G;
+	bmi160_foc.foc_gyr_en = BMI160_ENABLE;
 	bmi160_foc.foc_acc_x = BMI160_FOC_ACCEL_POSITIVE_G;
 	bmi160_foc.foc_acc_y = BMI160_FOC_ACCEL_POSITIVE_G;
 	bmi160_foc.foc_acc_z = BMI160_FOC_ACCEL_POSITIVE_G;
@@ -158,6 +159,77 @@ int8_t init_bmi160_sensor_driver_interface(struct bmi160_dev *bmi160)
 	#endif
 	return ( BMI160_E_INVALID_CONFIG );
 }
+
+int8_t bmi160_calibration(struct bmi160_dev *bmi160,uint32_t IterTimeMS)
+{
+	/*<! Check null-pointer  <!*/
+	if( bmi160 == NULL )
+	{
+	   Error_Handler();
+	}
+
+	if ( IterTimeMS <= 0)
+	{
+	   Error_Handler();
+	}
+
+	uint32_t sample_num = 0U , current_tick = HAL_GetTick();
+	double acc_x_offset = 0.0f , acc_y_offset = 0.0f , acc_z_offset = 0.0f;
+	double gyr_x_offset = 0.0f , gyr_y_offset = 0.0f , gyr_z_offset = 0.0f;
+
+	while( ( HAL_GetTick() - current_tick ) < IterTimeMS )
+	{
+
+	  if( bmi160_get_sensor_data((BMI160_ACCEL_SEL | BMI160_GYRO_SEL),&bmi160->accel_data,&bmi160->gyro_data,(struct bmi160_dev*)bmi160) != BMI160_OK)
+	  {
+		  printf("BMI160 sensor data failed !\n");
+		  Error_Handler();
+	  }
+
+	  acc_x_offset += (double)bmi160->accel_data.x;
+	  acc_y_offset += (double)bmi160->accel_data.y;
+	  acc_z_offset += (double)bmi160->accel_data.z;
+
+	  gyr_x_offset += (double)bmi160->gyro_data.x;
+	  gyr_y_offset += (double)bmi160->gyro_data.y;
+	  gyr_z_offset += (double)bmi160->gyro_data.z;
+
+	  ++sample_num;
+	}
+
+	acc_x_offset /= (double)sample_num;
+	acc_y_offset /= (double)sample_num;
+	acc_z_offset = (acc_z_offset / (double)sample_num) - 1 ;
+
+	gyr_x_offset /= (double)sample_num;
+	gyr_y_offset /= (double)sample_num;
+	gyr_z_offset /= (double)sample_num;
+
+	return ( BMI160_OK );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

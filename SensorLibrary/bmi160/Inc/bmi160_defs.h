@@ -1590,6 +1590,12 @@ struct bmi160_fifo_frame
 };
 struct bmi160_dev
 {
+	/*! 3-axis acceleration data structure */
+	struct bmi160_sensor_data accel_data;
+
+	/*! 3-axis gyroscope data structure */
+	struct bmi160_sensor_data gyro_data;
+
     /*! Chip Id */
     uint8_t chip_id;
 

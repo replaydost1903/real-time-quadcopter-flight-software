@@ -6,13 +6,13 @@
 #include "stm32f4xx.h"
 #include "bmi160.h"
 
-extern int8_t init_bmi160_sensor_driver_interface(struct bmi160_dev *bmi160);
+
 
 struct bmp160_interface
 {
 	TIM_HandleTypeDef *htim;
     I2C_HandleTypeDef *hi2c;
-    uint8_t dev_addr;
+
 };
 
 /*
@@ -32,5 +32,36 @@ int8_t bmi160_i2c_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t *read_data, 
 int8_t bmi160_i2c_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *data, uint16_t len);
 void delay_ms(uint32_t period);
 
+/*
+ * Application Layer Function Declarations
+ */
+int8_t bmi160_interface_init(struct bmi160_dev *bmi160);
+int8_t bmi160_calibration(struct bmi160_dev *bmi160,uint32_t IterTimeMS);
+
 
 #endif /* BMI160_PORTING_INC_BMI160_PORT_H_ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

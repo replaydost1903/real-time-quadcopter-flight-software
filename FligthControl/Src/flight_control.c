@@ -3,7 +3,7 @@
 /*<! This function declared in main.c file !>*/
 extern void Error_Handler(void);
 
-void FligthInit(struct FlightControlData_t *pFlightData)
+void flight_hardware_init(struct FlightControlData_t *pFlightData)
 {
 	uint8_t temp = 0U;
 	temp = (pFlightData == NULL) || (pFlightData->pBMI160 == NULL)    ||\

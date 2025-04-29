@@ -49,21 +49,30 @@ void Complementary_Update(struct complementary *pComp,\
 		Error_Handler();
 	}
 
-	roll_gyro = ( roll_acc + ( gx * pComp->ts ) ) ;
-	pitch_gyro = ( pitch_acc + ( gy * pComp->ts ) ) ;
-	yaw_gyro = ( yaw_acc + ( gz * pComp->ts ) ) ;
+//	roll_gyro = ( roll_acc + ( gx * pComp->ts ) ) ;
+//	pitch_gyro = ( pitch_acc + ( gy * pComp->ts ) ) ;
+//	yaw_gyro = ( yaw_acc + ( gz * pComp->ts ) ) ;
+//
+//	roll_acc = atan2(ay,az) * ( 180.0f / M_PI );
+//	pitch_acc = atan2(-ax, sqrt(ay * ay + az * az)) * ( 180.0f / M_PI );
+//
+//	double bx=0.0f,by=0.0f;
+//	bx = mx * cos(roll_acc*(M_PI / 180.0f)) + my * sin(roll_acc*(M_PI / 180.0f)) * sin(pitch_acc*(M_PI / 180.0f)) + mz * sin(roll_acc*(M_PI / 180.0f)) * cos(pitch_acc*(M_PI / 180.0f));
+//	by = my * cos(pitch_acc*(M_PI / 180.0f)) - mz *sin(pitch_acc*(M_PI / 180.0f));
+//	yaw_acc = atan2(-by,bx) * ( 180.0f / M_PI );
+//
+//	pComp->roll  = ( pComp->alpha * roll_gyro ) + ( 1 - pComp->alpha ) * ( roll_acc );
+//	pComp->pitch = ( pComp->alpha * pitch_gyro ) + ( 1 - pComp->alpha ) * ( pitch_acc );
+//	pComp->yaw = ( pComp->alpha * yaw_gyro ) + ( 1 - pComp->alpha ) * ( yaw_acc );
+	roll_gyro = ( roll_gyro + ( gx * pComp->ts ) ) ;
+	pitch_gyro = ( pitch_gyro + ( gy * pComp->ts ) ) ;
 
 	roll_acc = atan2(ay,az) * ( 180.0f / M_PI );
-	pitch_acc = atan2(-ax, sqrt(ay * ay + az * az)) * ( 180.0f / M_PI );
-
-	double bx=0.0f,by=0.0f;
-	bx = mx * cos(roll_acc*(M_PI / 180.0f)) + my * sin(roll_acc*(M_PI / 180.0f)) * sin(pitch_acc*(M_PI / 180.0f)) + mz * sin(roll_acc*(M_PI / 180.0f)) * cos(pitch_acc*(M_PI / 180.0f));
-	by = my * cos(pitch_acc*(M_PI / 180.0f)) - mz *sin(pitch_acc*(M_PI / 180.0f));
-	yaw_acc = atan2(-by,bx) * ( 180.0f / M_PI );
+	//pitch_acc = atan2(-ax, sqrt(ay * ay + az * az)) * ( 180.0f / M_PI );
+	pitch_acc = atan2(-ax, ( ay*sin(roll_acc*( M_PI/180.0f)) + az*cos(roll_acc*( M_PI/180.0f)) ))* ( 180.0f / M_PI );
 
 	pComp->roll  = ( pComp->alpha * roll_gyro ) + ( 1 - pComp->alpha ) * ( roll_acc );
 	pComp->pitch = ( pComp->alpha * pitch_gyro ) + ( 1 - pComp->alpha ) * ( pitch_acc );
-	pComp->yaw = ( pComp->alpha * yaw_gyro ) + ( 1 - pComp->alpha ) * ( yaw_acc );
 }
 
 

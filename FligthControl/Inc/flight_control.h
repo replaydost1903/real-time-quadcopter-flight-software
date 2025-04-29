@@ -7,6 +7,7 @@
 #include "bmi160_defs.h"
 #include "bmi160_port.h"
 #include "bmp388_port.h"
+#include "hmc5883l.h"
 
 typedef enum
 {
@@ -24,34 +25,27 @@ struct FlightHardwareInterface_t
 
 	struct bmp160_interface *pBMI160Interface;
 
+	struct hmc5883l_interface *pHMC5883LInterface;
 };
 
 struct FlightControlData_t
 {
-	struct FlightHardwareInterface_t *pHardware;
-
-	struct FlightControlParser_t *pFlightParser;
+	struct hmc5883l_dev *pHMC5883L;
 
 	struct bmi160_dev *pBMI160;
 
-	struct bmi160_sensor_data *pBMI160AccelData;
-
-	struct bmi160_sensor_data *pBMI160GyroData;
-
-	volatile int8_t bmi160_rslt;
-
 	struct bmp3_dev	*pBMP388;
 
-	struct bmp3_data *pBMP388Data;
+	struct FlightHardwareInterface_t *pHardware;
 
-	volatile int8_t bmp388_rslt;
+	struct FlightControlParser_t *pFlightParser;
 
 	FlightState_t fstat;
 
 };
 
 
-void FligthInit(struct FlightControlData_t*);
+void flight_hardware_init(struct FlightControlData_t*);
 
 
 #endif /* INC_FLIGHT_CONTROL_H_ */

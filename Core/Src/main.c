@@ -25,8 +25,8 @@
 #include <string.h>
 #include <stdio.h>
 #include "complementary.h"
-#include "bmi160.h"
 #include "bmi160_port.h"
+#include "bmi160.h"
 #include "bmp3.h"
 #include "bmp3_selftest.h"
 #include "bmp388_port.h"
@@ -35,6 +35,8 @@
 #include "rtwtypes.h"
 #include "QuadcopterModel.h"
 #include "hmc5883l.h"
+#include "MadgwickAHRS.h"
+#include "RCFilter.h"
 //#include "FreeRTOS.h"
 //#include "task.h"
 //#include "task_handles.h"
@@ -47,7 +49,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ACCEL_SENSITIVITY		( ( double )( 2048.0f ) )
+#define ACCEL_SENSITIVITY		( ( double )( 16384.0f ) )
 #define GYRO_SENSITIVITY		( ( double )( 16.4f) )
 #define ALPHA					( ( double )( 0.1f ) )
 /* USER CODE END PD */
@@ -59,11 +61,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
-I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim6;
-
-UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
@@ -74,35 +73,35 @@ struct complementary euler_angles = {0};
 struct bmi160_dev bmi160 = {0};													/*! 	@brief variable to hold the bmi160 main data 		*/
 struct bmi160_sensor_data bmi160_accel = {0};									/*! 	@brief variable to hold the bmi160 accel data 		*/
 struct bmi160_sensor_data bmi160_gyro = {0};									/*! 	@brief variable to hold the bmi160 gyro data 		*/
-struct bmp160_interface bmi160_intf = {0};			/*! 	@brief variable to hold the bmi160 interface 		*/
+struct bmp160_interface bmi160_intf = {0};										/*! 	@brief variable to hold the bmi160 interface 		*/
 
 /**
   * @brief  BMP388 Pressure Sensor Data Types
   */
-struct bmp3_dev bmp388 = {0};						/*! 	@brief variable to hold the bmp388 main data 		*/
-struct bmp3_data bmp388_data = {0};					/*!	 	@brief variable to hold the bmp388 pressure data 	*/
-struct bmp388_interface bmp388_intf = {&htim6,&hi2c2,BMP388_DEV_ADDR};			/*! 	@brief variable to hold the bmp388 interface 		*/
+struct bmp3_dev bmp388 = {0};													/*! 	@brief variable to hold the bmp388 main data 		*/
+struct bmp3_data bmp388_data = {0};												/*!	 	@brief variable to hold the bmp388 pressure data 	*/
+struct bmp388_interface bmp388_intf = {&htim6,&hi2c1,BMP388_DEV_ADDR};			/*! 	@brief variable to hold the bmp388 interface 		*/
 
-struct hmc5883l_dev hmc5883l_dev = {0};
+/**
+  * @brief  HMC5883L Magnetometer Sensor Data Types
+  */
+struct hmc5883l_dev hmc5883l = {0};
 struct hmc5883l_dev_intf hmc5883l_intf = {&hi2c1};
 struct hmc5883l_data hmc5883l_mag = {0};
 
-//TaskHandle_t task1_handle,task2_handle,task3_handle,task4_handle,task5_handle;
-char usb_ch;
-int flag=0;
-char buffer1[] = "You sent 1,get 1 back\r\n";
-char buffer2[] = "You sent 2,get 2 back\r\n";
-char buffer3[] = "You sent 3,get 3 back\r\n";
-double sum=0.0f;
+char usb_msg[100];
+
+float acc_x = 0.0f , acc_y = 0.0f , acc_z = 0.0f , gyro_x = 0.0f , gyro_y = 0.0f , gyro_z = 0.0f;
+
+RCFilter lowpassfilter = {0};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_I2C2_Init(void);
 static void MX_TIM6_Init(void);
-static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -142,18 +141,44 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
-  MX_I2C2_Init();
   MX_TIM6_Init();
-  MX_USART2_UART_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
-  /*!< BMI160 Init Process >!*/
-  Complementary_Init(&euler_angles, 0.7f, 50.0f);
-  init_bmi160_sensor_driver_interface(&bmi160);
+  /*!< Flight Hardware Object Initilization >!*/
+  struct FlightControlData_t quadcopter_obj = {0};
+  quadcopter_obj.pBMI160   = 	(struct bmi160_dev*)&bmi160;
+  quadcopter_obj.pBMP388   = 	(struct bmp3_dev*)&bmp388;
+  quadcopter_obj.pHMC5883L =	(struct hmc5883l_dev*)&hmc5883l;
+  quadcopter_obj.pHardware->pBMI160Interface->hi2c = (I2C_HandleTypeDef*)&hi2c1;
+  quadcopter_obj.pHardware->pBMI160Interface->htim = (I2C_HandleTypeDef*)&htim6;
+  quadcopter_obj.pHardware->pBMP388Interface->hi2c = (I2C_HandleTypeDef*)&hi2c1;
+  quadcopter_obj.pHardware->pBMP388Interface->htim = (I2C_HandleTypeDef*)&htim6;
+  quadcopter_obj.pHardware->pHMC5883LInterface->hi2c = (I2C_HandleTypeDef*)&hi2c1;
 
-  /*!< BMP388 Init Process >!*/
-  //init_bmp388_sensor_driver_interface(&bmp388,&bmp388_intf);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   /*!< Segger System View Init >!*/
 //  DWT->CTRL |= (1 << 0);
@@ -182,19 +207,32 @@ int main(void)
   //printf("Not enough heap memory !\n");
   //Error_Handler();
 
+  //  SCB->CPACR |= (0xF << 20); // CP10 ve CP11'i full erişim (11) yap
+  //
+  //  rtU.w1=100;
+  //  rtU.w2=50;
+  //  rtU.w3=50;
+  //  rtU.w4=200;
+  //
+  //  QuadcopterModel_initialize();
 
-//  char text[100];
-//  int count=0;
-//
-//  SCB->CPACR |= (0xF << 20); // CP10 ve CP11'i full erişim (11) yap
-//
-//  rtU.w1=100;
-//  rtU.w2=50;
-//  rtU.w3=50;
-//  rtU.w4=200;
-//
-//  QuadcopterModel_initialize();
+  //  /*!< BMP388 Init Process >!*/
+  //  init_bmp388_sensor_driver_interface(&bmp388,&bmp388_intf);
+  //  calibration_bmp388_sensor(&bmp388, &bmp388_data, 1000U);
 
+  /*!< Complementary Filter Init >!*/
+  //Complementary_Init(&euler_angles, 0.0f, 1.0f);
+
+  /*!< BMI160 Init >!*/
+  //bmi160_interface_init(&bmi160);
+
+  /*
+   * Accelerometer and Gyroscope Calibration
+   * Kalibrasyon sırasında sensör hareketsiz bir şekilde düz bir zeminde durmalı !!!
+   */
+
+
+  /*!< HMC5883L Init Process >!*/
   hmc5883l_dev.intfptr = &hmc5883l_intf;
   hmc5883l_dev.read_func = hmc5883l_read;
   hmc5883l_dev.write_func = hmc5883l_write;
@@ -204,69 +242,40 @@ int main(void)
 	  printf("HMC5883L init error !\n");
 	  Error_Handler();
   }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
 	  hmc5883l_get_data(&hmc5883l_dev, &hmc5883l_mag);
 
-	  if( bmi160_get_sensor_data((BMI160_ACCEL_SEL | BMI160_GYRO_SEL),&bmi160_accel, &bmi160_gyro, &bmi160) != BMI160_OK)
-	  {
-		  printf("BMI160 sensor data failed !\n");
-		  Error_Handler();
-	  }
+	  sprintf(usb_msg,"%f,%f,%f\r\n",hmc5883l_mag.mx,hmc5883l_mag.my,hmc5883l_mag.mz);
+	  CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
+	  HAL_Delay(1);
 
-	  Complementary_Update(&euler_angles, bmi160_accel.x, bmi160_accel.y, bmi160_accel.z,bmi160_gyro.x, bmi160_gyro.y, bmi160_gyro.z, hmc5883l_mag.mx, hmc5883l_mag.my,hmc5883l_mag.mz);
-
-	  HAL_Delay(50);
-
-//	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
+//	  if( bmi160_get_sensor_data((BMI160_ACCEL_SEL | BMI160_GYRO_SEL),&bmi160_accel, &bmi160_gyro, &bmi160) != BMI160_OK)
 //	  {
-//		  HAL_Delay(10);
-//		  while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0));
-//		  count=1;
+//		  printf("BMI160 sensor data failed !\n");
+//		  Error_Handler();
 //	  }
+
+//	  acc_x = (double)bmi160_accel.x/ACCEL_SENSITIVITY - acc_x_offset;
+//	  acc_y = (double)bmi160_accel.y/ACCEL_SENSITIVITY - acc_y_offset;
+//	  acc_z = (double)bmi160_accel.z/ACCEL_SENSITIVITY - acc_z_offset;
 //
-//	  if(count)
-//	  {
-//		  QuadcopterModel_step();
-//		  HAL_Delay((uint32_t)((double)(1000.0f) * (double)rtM->Timing.stepSize0));
-//		  sprintf(text,"yaw = %f\t\n",rtY.yaw);
-//		  CDC_Transmit_FS((uint8_t*)text, strlen(text));
-//	  }
+//	  gyro_x = (double)bmi160_gyro.x/GYRO_SENSITIVITY - gyr_x_offset;
+//	  gyro_y = (double)bmi160_gyro.y/GYRO_SENSITIVITY - gyr_y_offset;
+//	  gyro_z = (double)bmi160_gyro.z/GYRO_SENSITIVITY - gyr_z_offset;
+//
+//	  Complementary_Update(&euler_angles,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,0,0,0);
+
+
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-//	  while (i++<5)
-//	  {
-//		  if ( get_bmp388_sensor_data(&bmp388,&bmp388_data) != BMP3_OK  )
-//		  {
-//			  Error_Handler();
-//		  }
-//
-//		  if ( get_bmp388_altitude_data(&bmp388_data) != BMP3_OK )
-//		  {
-//			  Error_Handler();
-//		  }
-//
-//		  sum += bmp388_data.altitude[2];
-//
-//		  HAL_Delay(20);
-//	  }
-//
-//	  sum /= i;
-//	  i=0;
-//	  sum=0.0f;
-
-//	  calibration_bmp388_sensor(&bmp388, &bmp388_data, 50U);
-//	  sprintf(text,"reference %f\t\n",bmp388_data.altitude[1]);
-//	  CDC_Transmit_FS((uint8_t*)text, strlen(text));
-//	  HAL_Delay(200);
   }
   /* USER CODE END 3 */
 }
@@ -332,7 +341,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 400000;
+  hi2c1.Init.ClockSpeed = 100000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -347,40 +356,6 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
-
-}
-
-/**
-  * @brief I2C2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C2_Init(void)
-{
-
-  /* USER CODE BEGIN I2C2_Init 0 */
-
-  /* USER CODE END I2C2_Init 0 */
-
-  /* USER CODE BEGIN I2C2_Init 1 */
-
-  /* USER CODE END I2C2_Init 1 */
-  hi2c2.Instance = I2C2;
-  hi2c2.Init.ClockSpeed = 100000;
-  hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c2.Init.OwnAddress1 = 0;
-  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c2.Init.OwnAddress2 = 0;
-  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C2_Init 2 */
-
-  /* USER CODE END I2C2_Init 2 */
 
 }
 
@@ -423,39 +398,6 @@ static void MX_TIM6_Init(void)
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -470,8 +412,8 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, GREEN_LED_Pin|ORANGE_LED_Pin|RED_LED_Pin|BLUE_LED_Pin, GPIO_PIN_RESET);
@@ -495,11 +437,11 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-int _write(int file, char *ptr, int len)
-{
-  HAL_UART_Transmit(&huart2,(uint8_t*)ptr,len,HAL_MAX_DELAY);
-  return len;
-}
+//int _write(int file, char *ptr, int len)
+//{
+//  HAL_UART_Transmit(&huart2,(uint8_t*)ptr,len,HAL_MAX_DELAY);
+//  return len;
+//}
 /* USER CODE END 4 */
 
 /**
@@ -510,6 +452,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+  HAL_GPIO_WritePin(RED_LED_GPIO_Port, RED_LED_Pin, 1U);
   __disable_irq();
   while (1)
   {

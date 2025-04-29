@@ -146,7 +146,7 @@ static __int8_t hmc5883l_self_test(struct hmc5883l_dev *hmc5883l)
 	uint8_t rx_data[6]={0};
 	uint8_t tx_data[1]={0};
 
-	int16_t self_test_x = 0,self_test_y = 0,self_test_z = 0;
+	uint16_t self_test_x = 0,self_test_y = 0,self_test_z = 0;
 
 	// Write CRA (00) – send 0x3C 0x00 0x71 (8-average, 15 Hz default, positive self test measurement)
 	tx_data[0] = 0x71;
@@ -160,13 +160,13 @@ static __int8_t hmc5883l_self_test(struct hmc5883l_dev *hmc5883l)
 	tx_data[0] = 0x00;
 	hmc5883l->write_func(HMC5883L_MODE_REG,tx_data,1U);
 
-	HAL_Delay(20);
+	HAL_Delay(100);
 
 	hmc5883l->read_func(HMC5883L_DOR_X_MSB_REG,rx_data,6U);
 
-	self_test_x = (int16_t)(( rx_data[0] << 8U ) | rx_data[1]);
-	self_test_y = (int16_t)(( rx_data[2] << 8U ) | rx_data[3]);
-	self_test_z = (int16_t)(( rx_data[4] << 8U ) | rx_data[5]);
+	self_test_x = (uint16_t)(( rx_data[0] << 8U ) | rx_data[1]);
+	self_test_z = (uint16_t)(( rx_data[2] << 8U ) | rx_data[3]);
+	self_test_y = (uint16_t)(( rx_data[4] << 8U ) | rx_data[5]);
 
 	temp = (self_test_x >= 243) &&  (self_test_x <= 575) &&\
 		   (self_test_y >= 243) &&  (self_test_y <= 575) &&\

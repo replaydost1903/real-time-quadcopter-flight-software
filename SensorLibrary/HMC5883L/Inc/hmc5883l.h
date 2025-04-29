@@ -19,10 +19,10 @@
 #define HMC5883L_MODE_REG					(0x02U)				/*! Read/Write Sensor Register Address 8-bit */
 #define HMC5883L_DOR_X_MSB_REG				(0x03U)				/*! Read Only Sensor Register Address 8-bit  */
 #define HMC5883L_DOR_X_LSB_REG				(0x04U)				/*! Read Only Sensor Register Address 8-bit  */
-#define HMC5883L_DOR_Y_MSB_REG				(0x05U)				/*! Read Only Sensor Register Address 8-bit  */
-#define HMC5883L_DOR_Y_LSB_REG				(0x06U)				/*! Read Only Sensor Register Address 8-bit  */
-#define HMC5883L_DOR_Z_MSB_REG				(0x07U)				/*! Read Only Sensor Register Address 8-bit  */
-#define HMC5883L_DOR_Z_LSB_REG				(0x08U)				/*! Read Only Sensor Register Address 8-bit  */
+#define HMC5883L_DOR_Z_MSB_REG				(0x05U)				/*! Read Only Sensor Register Address 8-bit  */
+#define HMC5883L_DOR_Z_LSB_REG				(0x06U)				/*! Read Only Sensor Register Address 8-bit  */
+#define HMC5883L_DOR_Y_MSB_REG				(0x07U)				/*! Read Only Sensor Register Address 8-bit  */
+#define HMC5883L_DOR_Y_LSB_REG				(0x08U)				/*! Read Only Sensor Register Address 8-bit  */
 #define HMC5883L_STATUS_REG					(0x09U)				/*! Read Only Sensor Register Address 8-bit  */
 #define HMC5883L_ID_A_REG					(0x0AU)				/*! Read Only Sensor Register Address 8-bit  */
 #define HMC5883L_ID_B_REG					(0x0BU)				/*! Read Only Sensor Register Address 8-bit  */
@@ -81,7 +81,7 @@ struct hmc5883l_data
 	double mz;
 };
 
-struct hmc5883l_dev_intf
+struct hmc5883l_interface
 {
 	I2C_HandleTypeDef *hi2c;
 
@@ -90,6 +90,8 @@ struct hmc5883l_dev_intf
 
 struct hmc5883l_dev
 {
+	struct hmc5883l_data mag_data;
+
 	uint8_t dev_addr;
 
 	uint8_t id_A;
