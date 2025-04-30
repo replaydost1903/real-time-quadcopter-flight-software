@@ -832,9 +832,6 @@ struct bmp3_data
     /*! Compensated pressure */
     double pressure;
 
-    /*! Compensated altitude */
-    double altitude[3];
-
 };
 
 #else
@@ -881,6 +878,12 @@ struct bmp3_uncomp_data
  */
 struct bmp3_dev
 {
+	/*!
+	 * @brief bmp3 sensor structure which comprises of temperature and pressure
+	 * data.
+	 */
+	struct bmp3_data pressure_data;
+
     /*! Chip Id */
     uint8_t chip_id;
 

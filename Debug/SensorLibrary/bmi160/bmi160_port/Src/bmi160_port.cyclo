@@ -1,0 +1,5 @@
+../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:20:8:bmi160_i2c_write	1
+../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:26:8:bmi160_i2c_read	1
+../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:32:6:delay_ms	1
+../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:37:8:bmi160_interface_init	8
+../SensorLibrary/bmi160/bmi160_port/Src/bmi160_port.c:163:8:bmi160_calibration	5

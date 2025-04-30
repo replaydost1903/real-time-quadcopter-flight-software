@@ -11,6 +11,7 @@ RM := rm -rf
 -include sources.mk
 -include USB_DEVICE/Target/subdir.mk
 -include USB_DEVICE/App/subdir.mk
+-include SoundEffect/Src/subdir.mk
 -include SensorLibrary/bmp388/bmp388_selftest/Src/subdir.mk
 -include SensorLibrary/bmp388/bmp388_port/Src/subdir.mk
 -include SensorLibrary/bmp388/Src/subdir.mk

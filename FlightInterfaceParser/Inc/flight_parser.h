@@ -26,7 +26,7 @@ typedef enum
 
 }FlightInterfaceState_t;
 
-struct FlightControlParser_t
+struct FlightCommandInterface_t
 {
 	uint8_t ui8index;
 	uint8_t ui8buffer[BUFFER_SIZE];
@@ -37,9 +37,9 @@ struct FlightControlParser_t
 
 };
 
-void FligthInterfaceInit(struct FlightControlParser_t*);
-void FligthInterfacePacketParser(struct FlightControlParser_t*);
-void FligthInterfaceCommandParser(struct FlightControlParser_t*);
+void FligthInterfaceInit(struct FlightCommandInterface_t*);
+void FligthInterfacePacketParser(struct FlightCommandInterface_t*);
+void FligthInterfaceCommandParser(struct FlightCommandInterface_t*);
 
 #endif /* INC_FLIGHT_PARSER_H_ */
 

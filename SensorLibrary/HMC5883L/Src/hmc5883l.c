@@ -5,7 +5,7 @@
 
 extern void Error_Handler(void);
 
-extern struct hmc5883l_dev_intf hmc5883l_intf;
+extern struct hmc5883l_interface hmc5883l_intf;
 
 static __int8_t hmc5883l_self_test(struct hmc5883l_dev *hmc5883l);
 
@@ -54,6 +54,10 @@ __int8_t hmc5883l_write(uint16_t regaddr,uint8_t *pdata,uint16_t len)
 
 __int8_t hmc5883l_init(struct hmc5883l_dev *hmc5883l)
 {
+	hmc5883l->intfptr = &hmc5883l_intf;
+	hmc5883l->read_func = hmc5883l_read;
+	hmc5883l->write_func = hmc5883l_write;
+
 	uint8_t read_data[3] = {0};
 	uint8_t temp = 0U;
 
@@ -102,7 +106,7 @@ __int8_t hmc5883l_init(struct hmc5883l_dev *hmc5883l)
 }
 
 
-__int8_t hmc5883l_is_ready(struct hmc5883l_dev *hmc5883l,struct hmc5883l_dev_intf *hmc5883l_intf)
+__int8_t hmc5883l_is_ready(struct hmc5883l_dev *hmc5883l,struct hmc5883l_interface *hmc5883l_intf)
 {
 	HAL_StatusTypeDef status = 0U;
 	uint8_t dev_no = 0U;

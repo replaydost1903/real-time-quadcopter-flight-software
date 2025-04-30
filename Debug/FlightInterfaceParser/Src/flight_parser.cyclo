@@ -1,0 +1,3 @@
+../FlightInterfaceParser/Src/flight_parser.c:3:6:FligthInterfaceInit	1
+../FlightInterfaceParser/Src/flight_parser.c:11:6:FligthInterfacePacketParser	1
+../FlightInterfaceParser/Src/flight_parser.c:16:6:FligthInterfaceCommandParser	1

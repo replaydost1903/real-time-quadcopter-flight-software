@@ -111,7 +111,7 @@ struct hmc5883l_dev
 __int8_t hmc5883l_read(uint16_t regaddr,const uint8_t *pdata,uint16_t len);
 __int8_t hmc5883l_write(uint16_t regaddr,uint8_t *pdata,uint16_t len);
 __int8_t hmc5883l_init(struct hmc5883l_dev *);
-__int8_t hmc5883l_is_ready(struct hmc5883l_dev*,struct hmc5883l_dev_intf *hmc5883l_intf);
+__int8_t hmc5883l_is_ready(struct hmc5883l_dev*,struct hmc5883l_interface *hmc5883l_intf);
 __int8_t hmc5883l_get_data(struct hmc5883l_dev *hmc5883l,struct hmc5883l_data *hmc5883l_data);
 
 

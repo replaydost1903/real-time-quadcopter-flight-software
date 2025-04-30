@@ -1,0 +1,6 @@
+../SensorLibrary/HMC5883L/Src/hmc5883l.c:13:10:hmc5883l_read	3
+../SensorLibrary/HMC5883L/Src/hmc5883l.c:33:10:hmc5883l_write	3
+../SensorLibrary/HMC5883L/Src/hmc5883l.c:55:10:hmc5883l_init	9
+../SensorLibrary/HMC5883L/Src/hmc5883l.c:109:10:hmc5883l_is_ready	5
+../SensorLibrary/HMC5883L/Src/hmc5883l.c:141:17:hmc5883l_self_test	9
+../SensorLibrary/HMC5883L/Src/hmc5883l.c:194:10:hmc5883l_get_data	3

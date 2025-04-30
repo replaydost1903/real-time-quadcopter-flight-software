@@ -42,6 +42,7 @@
 "./SensorLibrary/bmp388/Src/bmp3.o"
 "./SensorLibrary/bmp388/bmp388_port/Src/bmp388_port.o"
 "./SensorLibrary/bmp388/bmp388_selftest/Src/bmp3_selftest.o"
+"./SoundEffect/Src/buzzer_tone.o"
 "./USB_DEVICE/App/usb_device.o"
 "./USB_DEVICE/App/usbd_cdc_if.o"
 "./USB_DEVICE/App/usbd_desc.o"

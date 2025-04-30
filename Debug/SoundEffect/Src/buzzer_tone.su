@@ -1,0 +1,2 @@
+../SoundEffect/Src/buzzer_tone.c:7:10:presForFrequency	16	static
+../SoundEffect/Src/buzzer_tone.c:13:6:quadcopter_opening_tone	16	static

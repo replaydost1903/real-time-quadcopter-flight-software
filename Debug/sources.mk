@@ -40,6 +40,7 @@ SensorLibrary/bmi160/bmi160_port/Src \
 SensorLibrary/bmp388/Src \
 SensorLibrary/bmp388/bmp388_port/Src \
 SensorLibrary/bmp388/bmp388_selftest/Src \
+SoundEffect/Src \
 USB_DEVICE/App \
 USB_DEVICE/Target \
 

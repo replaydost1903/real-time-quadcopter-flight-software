@@ -37,6 +37,7 @@
 #include "hmc5883l.h"
 #include "MadgwickAHRS.h"
 #include "RCFilter.h"
+#include "flight_control.h"
 //#include "FreeRTOS.h"
 //#include "task.h"
 //#include "task_handles.h"
@@ -62,39 +63,17 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
-
-/**
-  * @brief  BMI160 IMU Sensor Data Types
-  */
-struct complementary euler_angles = {0};
+struct FlightControlSystem_t quadcopter = {0};
 struct bmi160_dev bmi160 = {0};													/*! 	@brief variable to hold the bmi160 main data 		*/
-struct bmi160_sensor_data bmi160_accel = {0};									/*! 	@brief variable to hold the bmi160 accel data 		*/
-struct bmi160_sensor_data bmi160_gyro = {0};									/*! 	@brief variable to hold the bmi160 gyro data 		*/
 struct bmp160_interface bmi160_intf = {0};										/*! 	@brief variable to hold the bmi160 interface 		*/
-
-/**
-  * @brief  BMP388 Pressure Sensor Data Types
-  */
 struct bmp3_dev bmp388 = {0};													/*! 	@brief variable to hold the bmp388 main data 		*/
-struct bmp3_data bmp388_data = {0};												/*!	 	@brief variable to hold the bmp388 pressure data 	*/
 struct bmp388_interface bmp388_intf = {&htim6,&hi2c1,BMP388_DEV_ADDR};			/*! 	@brief variable to hold the bmp388 interface 		*/
-
-/**
-  * @brief  HMC5883L Magnetometer Sensor Data Types
-  */
 struct hmc5883l_dev hmc5883l = {0};
-struct hmc5883l_dev_intf hmc5883l_intf = {&hi2c1};
-struct hmc5883l_data hmc5883l_mag = {0};
-
-char usb_msg[100];
-
-float acc_x = 0.0f , acc_y = 0.0f , acc_z = 0.0f , gyro_x = 0.0f , gyro_y = 0.0f , gyro_z = 0.0f;
-
-RCFilter lowpassfilter = {0};
-
+struct hmc5883l_interface hmc5883l_intf = {&hi2c1};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,8 +81,9 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM6_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void initialize_system_links(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -143,105 +123,38 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM6_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  /*!< Flight Hardware Object Initilization >!*/
-  struct FlightControlData_t quadcopter_obj = {0};
-  quadcopter_obj.pBMI160   = 	(struct bmi160_dev*)&bmi160;
-  quadcopter_obj.pBMP388   = 	(struct bmp3_dev*)&bmp388;
-  quadcopter_obj.pHMC5883L =	(struct hmc5883l_dev*)&hmc5883l;
-  quadcopter_obj.pHardware->pBMI160Interface->hi2c = (I2C_HandleTypeDef*)&hi2c1;
-  quadcopter_obj.pHardware->pBMI160Interface->htim = (I2C_HandleTypeDef*)&htim6;
-  quadcopter_obj.pHardware->pBMP388Interface->hi2c = (I2C_HandleTypeDef*)&hi2c1;
-  quadcopter_obj.pHardware->pBMP388Interface->htim = (I2C_HandleTypeDef*)&htim6;
-  quadcopter_obj.pHardware->pHMC5883LInterface->hi2c = (I2C_HandleTypeDef*)&hi2c1;
+  /*!< FPU Full Access >!*/
+  SCB->CPACR |= (0x0F << 20U);
 
+  /*!< Pointer addresses of the sensor's structures are assigned to the main quadcopter data structure >!*/
+  initialize_system_links();
 
+  /*!< BMP388 Init and Z-Axis Calibration Process >!*/
+  bmp388_interface_init(quadcopter.pBMP388,quadcopter.pHardware->pBMP388Interface);
+  bmp388_calibration(quadcopter.pBMP388, &quadcopter.pBMP388->pressure_data, 3000U);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /*!< Segger System View Init >!*/
-//  DWT->CTRL |= (1 << 0);
-//
-//  SEGGER_SYSVIEW_Conf();
-//
-//  SEGGER_SYSVIEW_Start();
-//
-//  /*!< FreeRTOS Task Creation >!*/
-//  configASSERT(xTaskCreate(vTask1, "Task-1", (uint16_t)496, NULL, 3U, &task1_handle));
-//  configASSERT(xTaskCreate(vTask2, "Task-2", (uint16_t)496, NULL, 3U, &task2_handle));
-//  configASSERT(xTaskCreate(vTask3, "Task-3", (uint16_t)496, NULL, 3U, &task3_handle));
-//  configASSERT(xTaskCreate(vTask4, "Task-4", (uint16_t)496, NULL, 3U, &task4_handle));
-//  configASSERT(xTaskCreate(vTask5, "Task-5", (uint16_t)496, NULL, 3U, &task5_handle));
-
-  /* Start the scheduler so the tasks start executing. */
-  //vTaskStartScheduler();
-
-  /*
-  * If all is well main() will not reach here because the scheduler will now
-  * be running the created tasks. If main() does reach here then there was
-  * not enough heap memory to create either the idle or timer tasks
-  * (described later in this book). Chapter 3 provides more information on
-  * heap memory management.
-  */
-  //printf("Not enough heap memory !\n");
-  //Error_Handler();
-
-  //  SCB->CPACR |= (0xF << 20); // CP10 ve CP11'i full erişim (11) yap
-  //
-  //  rtU.w1=100;
-  //  rtU.w2=50;
-  //  rtU.w3=50;
-  //  rtU.w4=200;
-  //
-  //  QuadcopterModel_initialize();
-
-  //  /*!< BMP388 Init Process >!*/
-  //  init_bmp388_sensor_driver_interface(&bmp388,&bmp388_intf);
-  //  calibration_bmp388_sensor(&bmp388, &bmp388_data, 1000U);
-
-  /*!< Complementary Filter Init >!*/
-  //Complementary_Init(&euler_angles, 0.0f, 1.0f);
-
-  /*!< BMI160 Init >!*/
-  //bmi160_interface_init(&bmi160);
-
-  /*
-   * Accelerometer and Gyroscope Calibration
-   * Kalibrasyon sırasında sensör hareketsiz bir şekilde düz bir zeminde durmalı !!!
-   */
-
+  /*!< BMI160 Init and Gyro-Acc Offset Calibration Process >!*/
+  bmi160_interface_init(&bmi160);
+  bmi160_calibration(quadcopter.pBMI160, 3000U);
 
   /*!< HMC5883L Init Process >!*/
-  hmc5883l_dev.intfptr = &hmc5883l_intf;
-  hmc5883l_dev.read_func = hmc5883l_read;
-  hmc5883l_dev.write_func = hmc5883l_write;
+  hmc5883l_init(quadcopter.pHMC5883L);
 
-  if ( hmc5883l_init(&hmc5883l_dev) != HMC5883L_OK)
-  {
-	  printf("HMC5883L init error !\n");
-	  Error_Handler();
-  }
+  /*!< Quadcopter Mathematical Model ---> Software In the Loop Test >!*/
+  rtU.w1 	= 0U;
+  rtU.w2 	= 0U;
+  rtU.w3 	= 0U;
+  rtU.w4 	= 0U;
+  rtY.pitch = 0U;
+  rtY.roll 	= 0U;
+  rtY.x 	= 0U;
+  rtY.y 	= 0U;
+  rtY.z 	= 0U;
+
+  QuadcopterModel_initialize();
 
   /* USER CODE END 2 */
 
@@ -249,18 +162,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  hmc5883l_get_data(&hmc5883l_dev, &hmc5883l_mag);
-
-	  sprintf(usb_msg,"%f,%f,%f\r\n",hmc5883l_mag.mx,hmc5883l_mag.my,hmc5883l_mag.mz);
-	  CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
-	  HAL_Delay(1);
-
+//	  hmc5883l_get_data(&hmc5883l_dev, &hmc5883l_mag);
+//
+//	  sprintf(usb_msg,"%f,%f,%f\r\n",hmc5883l_mag.mx,hmc5883l_mag.my,hmc5883l_mag.mz);
+//	  CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
+//	  HAL_Delay(1);
+//
 //	  if( bmi160_get_sensor_data((BMI160_ACCEL_SEL | BMI160_GYRO_SEL),&bmi160_accel, &bmi160_gyro, &bmi160) != BMI160_OK)
 //	  {
 //		  printf("BMI160 sensor data failed !\n");
 //		  Error_Handler();
 //	  }
-
+//
 //	  acc_x = (double)bmi160_accel.x/ACCEL_SENSITIVITY - acc_x_offset;
 //	  acc_y = (double)bmi160_accel.y/ACCEL_SENSITIVITY - acc_y_offset;
 //	  acc_z = (double)bmi160_accel.z/ACCEL_SENSITIVITY - acc_z_offset;
@@ -270,8 +183,6 @@ int main(void)
 //	  gyro_z = (double)bmi160_gyro.z/GYRO_SENSITIVITY - gyr_z_offset;
 //
 //	  Complementary_Update(&euler_angles,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,0,0,0);
-
-
 
     /* USER CODE END WHILE */
 
@@ -360,6 +271,55 @@ static void MX_I2C1_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 1000;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 500;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
+
+}
+
+/**
   * @brief TIM6 Initialization Function
   * @param None
   * @retval None
@@ -437,11 +397,17 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-//int _write(int file, char *ptr, int len)
-//{
-//  HAL_UART_Transmit(&huart2,(uint8_t*)ptr,len,HAL_MAX_DELAY);
-//  return len;
-//}
+static void initialize_system_links(void)
+{
+  quadcopter.pBMI160   	= 	(struct bmi160_dev*)&bmi160;
+  quadcopter.pBMP388   	= 	(struct bmp3_dev*)&bmp388;
+  quadcopter.pHMC5883L 	=	(struct hmc5883l_dev*)&hmc5883l;
+  quadcopter.pHardware->pBMI160Interface->hi2c   = (I2C_HandleTypeDef*)&hi2c1;
+  quadcopter.pHardware->pBMI160Interface->htim   = (TIM_HandleTypeDef*)&htim6;
+  quadcopter.pHardware->pBMP388Interface->hi2c   = (I2C_HandleTypeDef*)&hi2c1;
+  quadcopter.pHardware->pBMP388Interface->htim   = (TIM_HandleTypeDef*)&htim6;
+  quadcopter.pHardware->pHMC5883LInterface->hi2c = (I2C_HandleTypeDef*)&hi2c1;
+}
 /* USER CODE END 4 */
 
 /**
