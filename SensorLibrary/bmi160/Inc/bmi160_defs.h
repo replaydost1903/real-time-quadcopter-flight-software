@@ -822,6 +822,24 @@ struct bmi160_sensor_data
     /*! Z-axis sensor data */
     int16_t z;
 
+    /*! Convert X-axis sensor data to double */
+    double xd;
+
+    /*! Convert Y-axis sensor data to double */
+    double yd;
+
+    /*! Convert Z-axis sensor data to double */
+    double zd;
+
+    /*! X-axis offset value data */
+    double x_offset;
+
+    /*! Y-axis offset value data */
+    double y_offset;
+
+    /*! Z-axis offset value data */
+    double z_offset;
+
     /*! sensor time */
     uint32_t sensortime;
 };
@@ -1588,6 +1606,7 @@ struct bmi160_fifo_frame
     /*! Value of Skipped frame counts */
     uint8_t skipped_frame_count;
 };
+
 struct bmi160_dev
 {
 	/*! 3-axis acceleration data structure */

@@ -1,13 +1,11 @@
 #include "bmi160_port.h"
 #include "bmi160_defs.h"
 
-extern I2C_HandleTypeDef hi2c1;
-
 __inline static void IsDeviceReady(uint8_t dev_addr);
 
-static void IsDeviceReady(uint8_t dev_addr)
+__inline static void IsDeviceReady(uint8_t dev_addr)
 {
-	  if(HAL_OK == HAL_I2C_IsDeviceReady(&hi2c1, (dev_addr << 1U), 100, HAL_MAX_DELAY))
+	  if(HAL_OK == HAL_I2C_IsDeviceReady(BMI160_I2Cx, (dev_addr << 1U), 100, HAL_MAX_DELAY))
 	  {
 		  HAL_GPIO_WritePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin, 1U);
 	  }
@@ -20,13 +18,13 @@ static void IsDeviceReady(uint8_t dev_addr)
 int8_t bmi160_i2c_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t *read_data, uint16_t len)
 {
 	dev_addr = ((dev_addr << 1U) | 0x0U);
-	HAL_I2C_Mem_Write(&hi2c1, dev_addr, reg_addr, 1U, read_data, len, HAL_MAX_DELAY);
+	HAL_I2C_Mem_Write(BMI160_I2Cx, dev_addr, reg_addr, 1U, read_data, len, HAL_MAX_DELAY);
 	return ( BMI160_OK );
 }
 int8_t bmi160_i2c_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *data, uint16_t len)
 {
 	dev_addr = ((dev_addr << 1U) | 0x1U);
-	HAL_I2C_Mem_Read(&hi2c1, dev_addr, reg_addr, 1U, data, len, HAL_MAX_DELAY);
+	HAL_I2C_Mem_Read(BMI160_I2Cx, dev_addr, reg_addr, 1U, data, len, HAL_MAX_DELAY);
 	return ( BMI160_OK );
 }
 void delay_ms(uint32_t period)
@@ -44,7 +42,7 @@ int8_t bmi160_interface_init(struct bmi160_dev *bmi160)
 
 #if ( ( BMI160_I2C_INTERFACE) && ( !BMI160_SPI_INTERFACE ) )
 
-	int8_t rslt;
+	int8_t rslt = 0U;
 
 	bmi160_soft_reset(bmi160);
 
@@ -91,15 +89,15 @@ int8_t bmi160_interface_init(struct bmi160_dev *bmi160)
 	printf("BMI160 gyroscope self-test success !\n");
 
 	/* Select the Output data rate, range of accelerometer sensor */
-	bmi160->accel_cfg.odr = BMI160_ACCEL_ODR_1600HZ;
-	bmi160->accel_cfg.range = BMI160_ACCEL_RANGE_2G;
+	bmi160->accel_cfg.odr = BMI160_GYRO_ODR_50HZ;
+	bmi160->accel_cfg.range = BMI160_ACCEL_RANGE_16G;
 	bmi160->accel_cfg.bw = BMI160_ACCEL_BW_NORMAL_AVG4;
 
 	/* Select the power mode of accelerometer sensor */
 	bmi160->accel_cfg.power = BMI160_ACCEL_NORMAL_MODE;
 
 	/* Select the Output data rate, range of Gyroscope sensor */
-	bmi160->gyro_cfg.odr = BMI160_GYRO_ODR_3200HZ;
+	bmi160->gyro_cfg.odr = BMI160_GYRO_ODR_50HZ;
 	bmi160->gyro_cfg.range = BMI160_GYRO_RANGE_2000_DPS;
 	bmi160->gyro_cfg.bw = BMI160_GYRO_BW_NORMAL_MODE;
 
@@ -147,7 +145,8 @@ int8_t bmi160_interface_init(struct bmi160_dev *bmi160)
 
 	printf("BMI160 sensor offset value success !\n");
 
-	HAL_Delay(2000);
+	/* After sensor init introduce 200 msec sleep */
+	HAL_Delay(200);
 
 	return ( BMI160_OK );
 
@@ -168,47 +167,82 @@ int8_t bmi160_calibration(struct bmi160_dev *bmi160,uint32_t IterTimeMS)
 	   Error_Handler();
 	}
 
+	/*<! Check iteration time  <!*/
 	if ( IterTimeMS <= 0)
 	{
 	   Error_Handler();
 	}
 
-	uint32_t sample_num = 0U , current_tick = HAL_GetTick();
-	double acc_x_offset = 0.0f , acc_y_offset = 0.0f , acc_z_offset = 0.0f;
-	double gyr_x_offset = 0.0f , gyr_y_offset = 0.0f , gyr_z_offset = 0.0f;
+	/*<! Reset accel data offset value  <!*/
+	bmi160->accel_data.x_offset = 0.0f;
+	bmi160->accel_data.y_offset = 0.0f;
+	bmi160->accel_data.z_offset = 0.0f;
 
+	/*<! Reset gyro data offset value  <!*/
+	bmi160->gyro_data.x_offset = 0.0f;
+	bmi160->gyro_data.y_offset = 0.0f;
+	bmi160->gyro_data.z_offset = 0.0f;
+
+	uint32_t sample_num = 0U;
+	uint32_t current_tick = HAL_GetTick();
+
+	/*<! Get data for the duration of the IterTimeMS
+	 * During this process, the sensor must be stationary and in a flat plane <!*/
 	while( ( HAL_GetTick() - current_tick ) < IterTimeMS )
 	{
-
-	  if( bmi160_get_sensor_data((BMI160_ACCEL_SEL | BMI160_GYRO_SEL),&bmi160->accel_data,&bmi160->gyro_data,(struct bmi160_dev*)bmi160) != BMI160_OK)
+	  if( bmi160_get_sensor_data((BMI160_ACCEL_SEL | BMI160_GYRO_SEL),&bmi160->accel_data,&bmi160->gyro_data,bmi160) != BMI160_OK)
 	  {
 		  printf("BMI160 sensor data failed !\n");
 		  Error_Handler();
 	  }
 
-	  acc_x_offset += (double)bmi160->accel_data.x;
-	  acc_y_offset += (double)bmi160->accel_data.y;
-	  acc_z_offset += (double)bmi160->accel_data.z;
+	  bmi160->accel_data.x_offset += (double)bmi160->accel_data.x;
+	  bmi160->accel_data.y_offset += (double)bmi160->accel_data.y;
+	  bmi160->accel_data.z_offset += (double)bmi160->accel_data.z;
 
-	  gyr_x_offset += (double)bmi160->gyro_data.x;
-	  gyr_y_offset += (double)bmi160->gyro_data.y;
-	  gyr_z_offset += (double)bmi160->gyro_data.z;
+	  bmi160->gyro_data.x_offset  += (double)bmi160->gyro_data.x;
+	  bmi160->gyro_data.y_offset  += (double)bmi160->gyro_data.y;
+	  bmi160->gyro_data.z_offset  += (double)bmi160->gyro_data.z;
 
 	  ++sample_num;
 	}
 
-	acc_x_offset /= (double)sample_num;
-	acc_y_offset /= (double)sample_num;
-	acc_z_offset = (acc_z_offset / (double)sample_num) - 1 ;
+	/*<! 3-axis accelerometer calibration result offset value  <!*/
+	bmi160->accel_data.x_offset = (((bmi160->accel_data.x_offset / (double)sample_num))/ACCEL_SENSITIVITY);
+	bmi160->accel_data.y_offset = (((bmi160->accel_data.y_offset / (double)sample_num))/ACCEL_SENSITIVITY);
+	bmi160->accel_data.z_offset = (((bmi160->accel_data.z_offset / (double)sample_num))/ACCEL_SENSITIVITY - 9.81f);
 
-	gyr_x_offset /= (double)sample_num;
-	gyr_y_offset /= (double)sample_num;
-	gyr_z_offset /= (double)sample_num;
+	/*<! 3-axis gyroscope calibration result offset value  <!*/
+	bmi160->gyro_data.x_offset = ((bmi160->gyro_data.x_offset / (double)sample_num))/GYRO_SENSITIVITY;
+	bmi160->gyro_data.y_offset = ((bmi160->gyro_data.y_offset / (double)sample_num))/GYRO_SENSITIVITY;
+	bmi160->gyro_data.z_offset = ((bmi160->gyro_data.z_offset / (double)sample_num))/GYRO_SENSITIVITY;
 
 	return ( BMI160_OK );
 }
 
+int8_t bmi160_get_acc_gyro(struct bmi160_dev *bmi160)
+{
+	if ( bmi160 == NULL )
+	{
+		Error_Handler();
+	}
 
+    if( bmi160_get_sensor_data((BMI160_ACCEL_SEL | BMI160_GYRO_SEL),&bmi160->accel_data,&bmi160->gyro_data,bmi160) != BMI160_OK)
+    {
+	    printf("BMI160 sensor data failed !\n");
+	    Error_Handler();
+    }
+
+    bmi160->accel_data.xd = (((double)bmi160->accel_data.x)/ACCEL_SENSITIVITY - bmi160->accel_data.x_offset);
+    bmi160->accel_data.yd = (((double)bmi160->accel_data.y)/ACCEL_SENSITIVITY - bmi160->accel_data.y_offset);
+    bmi160->accel_data.zd = (((double)bmi160->accel_data.z)/ACCEL_SENSITIVITY - bmi160->accel_data.z_offset);
+
+    bmi160->gyro_data.xd = (((double)bmi160->gyro_data.x)/GYRO_SENSITIVITY - bmi160->gyro_data.x_offset);
+    bmi160->gyro_data.yd = (((double)bmi160->gyro_data.y)/GYRO_SENSITIVITY - bmi160->gyro_data.y_offset);
+    bmi160->gyro_data.zd = (((double)bmi160->gyro_data.z)/GYRO_SENSITIVITY - bmi160->gyro_data.z_offset);
+
+	return ( BMI160_OK );
+}
 
 
 

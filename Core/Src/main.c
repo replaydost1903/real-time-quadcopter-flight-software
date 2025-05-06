@@ -37,7 +37,7 @@
 #include "hmc5883l.h"
 #include "MadgwickAHRS.h"
 #include "RCFilter.h"
-#include "flight_control.h"
+#include "KalmanFilter1D.h"
 //#include "FreeRTOS.h"
 //#include "task.h"
 //#include "task_handles.h"
@@ -50,9 +50,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ACCEL_SENSITIVITY		( ( double )( 16384.0f ) )
-#define GYRO_SENSITIVITY		( ( double )( 16.4f) )
-#define ALPHA					( ( double )( 0.1f ) )
+#define ALPHA					( ( double )( 0.95f ) )
+#define DEGREES_TO_RADIAN		(( double )((M_PI / 180.0f)))
+#define RADIAN_TO_DEGREES		(( double )((180.0f / M_PI)))
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -67,13 +67,16 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
-struct FlightControlSystem_t quadcopter = {0};
-struct bmi160_dev bmi160 = {0};													/*! 	@brief variable to hold the bmi160 main data 		*/
-struct bmp160_interface bmi160_intf = {0};										/*! 	@brief variable to hold the bmi160 interface 		*/
-struct bmp3_dev bmp388 = {0};													/*! 	@brief variable to hold the bmp388 main data 		*/
+struct bmi160_dev bmi160={0};													/*! 	@brief variable to hold the bmi160 main data 		*/
+struct bmp3_dev bmp388={0};													/*! 	@brief variable to hold the bmp388 main data 		*/
 struct bmp388_interface bmp388_intf = {&htim6,&hi2c1,BMP388_DEV_ADDR};			/*! 	@brief variable to hold the bmp388 interface 		*/
 struct hmc5883l_dev hmc5883l = {0};
 struct hmc5883l_interface hmc5883l_intf = {&hi2c1};
+double first_altitude = 0.0f ,last_altitude = 0.0f , altitude = 0.0f , filtered_altitude = 0.0f;
+uint8_t key = 1U;
+
+struct bmp3_status status = { { 0 } };
+int8_t rslt = 0U;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -83,12 +86,17 @@ static void MX_I2C1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-static void initialize_system_links(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+char usb_msg[200] = {0};
+float filtered_ax_f=0.0f,filtered_ay_f=0.0f,filtered_az_f=0.0f,filtered_gx_f=0.0f,filtered_gy_f=0.0f,filtered_gz_f=0.0f;
+float ax_f=0.0f,ay_f=0.0f,az_f=0.0f,gx_f=0.0,gy_f=0.0f,gz_f=0.0f;
+float gx_f_rad=0.0f,gy_f_rad=0.0f,gz_f_rad=0.0f;
+float roll=0.0f,pitch=0.0f,yaw=0.0f;
+float nonfilteredval = 0.0f , dynamic_alpha = 0.90f;
 /* USER CODE END 0 */
 
 /**
@@ -126,35 +134,45 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  /*!< FPU Full Access >!*/
-  SCB->CPACR |= (0x0F << 20U);
+  /*!< Initialise bmi160 sensor >!*/
+//  if ( bmi160_interface_init(&bmi160) != BMI160_OK)
+//  {
+//	  printf("BMI160 not initialised !\n");
+//	  Error_Handler();
+//  }
 
-  /*!< Pointer addresses of the sensor's structures are assigned to the main quadcopter data structure >!*/
-  initialize_system_links();
+  /*!< Calibration process for bmi160 sensor >!*/
+//  if ( bmi160_calibration(&bmi160,3000U) != BMI160_OK)
+//  {
+//	  printf("BMI160 not initialised !\n");
+//	  Error_Handler();
+//  }
 
-  /*!< BMP388 Init and Z-Axis Calibration Process >!*/
-  bmp388_interface_init(quadcopter.pBMP388,quadcopter.pHardware->pBMP388Interface);
-  bmp388_calibration(quadcopter.pBMP388, &quadcopter.pBMP388->pressure_data, 3000U);
+//  Kalman_Init(&kalmanRoll);
+//  Kalman_Init(&kalmanPitch);
+//
+//  RCFilter roll_lowpass,pitch_lowpass;
+//
+//  RCFilter_Init(&roll_lowpass, 5.0f,0.02f);
+//  RCFilter_Init(&pitch_lowpass, 5.0f,0.02f);
+//
+//  // Filtrelenmiş ivme verileri
+//  float ax_f = 0.0f, ay_f = 0.0f, az_f = 0.0f;
+//
+//  // Filtrelenmiş gyro verileri
+//  float gx_f = 0.0f, gy_f = 0.0f, gz_f = 0.0f;
 
-  /*!< BMI160 Init and Gyro-Acc Offset Calibration Process >!*/
-  bmi160_interface_init(&bmi160);
-  bmi160_calibration(quadcopter.pBMI160, 3000U);
-
-  /*!< HMC5883L Init Process >!*/
-  hmc5883l_init(quadcopter.pHMC5883L);
-
-  /*!< Quadcopter Mathematical Model ---> Software In the Loop Test >!*/
-  rtU.w1 	= 0U;
-  rtU.w2 	= 0U;
-  rtU.w3 	= 0U;
-  rtU.w4 	= 0U;
-  rtY.pitch = 0U;
-  rtY.roll 	= 0U;
-  rtY.x 	= 0U;
-  rtY.y 	= 0U;
-  rtY.z 	= 0U;
-
-  QuadcopterModel_initialize();
+//  /*!< Initialise bmp388 sensor >!*/
+//  if ( bmp388_interface_init(&bmp388, &bmp388_intf) != BMP3_OK )
+//  {
+//	  Error_Handler();
+//  }
+//
+//  /*!< Calibration process for bmp388 sensor >!*/
+//  if ( bmp388_calibration(&bmp388, 1000U) != BMP3_OK )
+//  {
+//	  Error_Handler();
+//  }
 
   /* USER CODE END 2 */
 
@@ -162,27 +180,69 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	  hmc5883l_get_data(&hmc5883l_dev, &hmc5883l_mag);
-//
-//	  sprintf(usb_msg,"%f,%f,%f\r\n",hmc5883l_mag.mx,hmc5883l_mag.my,hmc5883l_mag.mz);
-//	  CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
-//	  HAL_Delay(1);
-//
-//	  if( bmi160_get_sensor_data((BMI160_ACCEL_SEL | BMI160_GYRO_SEL),&bmi160_accel, &bmi160_gyro, &bmi160) != BMI160_OK)
+	  /*!< Get calibrated data for bmi160 sensor >!*/
+//	  if ( bmi160_get_acc_gyro(&bmi160) != BMI160_OK)
 //	  {
-//		  printf("BMI160 sensor data failed !\n");
+//		  printf("BMI160 isnt get data !\n");
+//		  Error_Handler();
+//	  }
+
+	  /*!< Convert int16_t to float data types >!*/
+//	  ax_f = bmi160.accel_data.xd;
+//	  ay_f = bmi160.accel_data.yd;
+//	  az_f = bmi160.accel_data.zd;
+//	  gx_f = bmi160.gyro_data.xd;
+//	  gy_f = bmi160.gyro_data.yd;
+//	  gz_f = bmi160.gyro_data.zd;
+
+	  /*!< First-order simple low-pass low-pass filter applied to 3-axis accelerometer data >!*/
+	  //filtered_ax_f = ALPHA * filtered_ax_f + (1 - ALPHA) * (bmi160.accel_data.xd);
+	  //filtered_ay_f = ALPHA * filtered_ay_f + (1 - ALPHA) * (bmi160.accel_data.yd);
+	  //filtered_az_f = ALPHA * filtered_az_f + (1 - ALPHA) * (bmi160.accel_data.zd);
+
+	  /*!< First-order simple low-pass low-pass filter applied to 3-axis gyroscope data >!*/
+	  //filtered_gx_f = ALPHA * filtered_gx_f + (1 - ALPHA) * (bmi160.gyro_data.xd);
+	  //filtered_gy_f = ALPHA * filtered_gy_f + (1 - ALPHA) * (bmi160.gyro_data.yd);
+	  //filtered_gz_f = ALPHA * filtered_gz_f + (1 - ALPHA) * (bmi160.gyro_data.zd);
+
+	  /*!< (°/s) data converted to (rad/s) for angular velocity >!*/
+	  //gx_f_rad = filtered_gx_f * DEGREES_TO_RADIAN;
+	  // gy_f_rad = filtered_gy_f * DEGREES_TO_RADIAN;
+	  //gz_f_rad = filtered_gz_f * DEGREES_TO_RADIAN;
+
+	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",ax_f,ay_f,az_f,filtered_ax_f,filtered_ay_f,filtered_az_f);
+	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",gx_f,gy_f,gz_f,filtered_gx_f,filtered_gy_f,filtered_gz_f);
+	  //CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
+
+	  //IMU_Update(filtered_ax_f/9.81f, filtered_ay_f/9.81f, filtered_az_f/9.81f, gx_f_rad, gy_f_rad, gz_f_rad, &roll, &pitch, &yaw);
+
+	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",ax_f,ay_f,az_f,filtered_ax_f,filtered_ay_f,filtered_az_f);
+	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",gx_f,gy_f,gz_f,filtered_gx_f,filtered_gy_f,filtered_gz_f);
+      //sprintf(usb_msg,"%f,%f\r\n",pitch,roll);
+	  //sprintf(usb_msg,"%f,%f,%f,%f\r\n",q0,q1,q2,q3);
+      //sprintf(usb_msg,"Orientation: %.2f %.2f %.2f\r\n",roll,pitch,yaw);
+      //CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
+
+
+	  /*!< Get calibrated data for bmp388 sensor >!*/
+//	  if ( bmp388_get_altitude(&bmp388, ALPHA) != BMP3_OK )
+//	  {
 //		  Error_Handler();
 //	  }
 //
-//	  acc_x = (double)bmi160_accel.x/ACCEL_SENSITIVITY - acc_x_offset;
-//	  acc_y = (double)bmi160_accel.y/ACCEL_SENSITIVITY - acc_y_offset;
-//	  acc_z = (double)bmi160_accel.z/ACCEL_SENSITIVITY - acc_z_offset;
+//	  sprintf(usb_msg,"%f\r\n",(float)bmp388.pressure_data.relative_altitude);
 //
-//	  gyro_x = (double)bmi160_gyro.x/GYRO_SENSITIVITY - gyr_x_offset;
-//	  gyro_y = (double)bmi160_gyro.y/GYRO_SENSITIVITY - gyr_y_offset;
-//	  gyro_z = (double)bmi160_gyro.z/GYRO_SENSITIVITY - gyr_z_offset;
-//
-//	  Complementary_Update(&euler_angles,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,0,0,0);
+//	  CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
+
+	  //sprintf(usb_msg,"Orientation: %.2f %.2f %.2f\r\n",roll,pitch,yaw);
+
+
+
+
+
+
+
+
 
     /* USER CODE END WHILE */
 
@@ -397,17 +457,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-static void initialize_system_links(void)
-{
-  quadcopter.pBMI160   	= 	(struct bmi160_dev*)&bmi160;
-  quadcopter.pBMP388   	= 	(struct bmp3_dev*)&bmp388;
-  quadcopter.pHMC5883L 	=	(struct hmc5883l_dev*)&hmc5883l;
-  quadcopter.pHardware->pBMI160Interface->hi2c   = (I2C_HandleTypeDef*)&hi2c1;
-  quadcopter.pHardware->pBMI160Interface->htim   = (TIM_HandleTypeDef*)&htim6;
-  quadcopter.pHardware->pBMP388Interface->hi2c   = (I2C_HandleTypeDef*)&hi2c1;
-  quadcopter.pHardware->pBMP388Interface->htim   = (TIM_HandleTypeDef*)&htim6;
-  quadcopter.pHardware->pHMC5883LInterface->hi2c = (I2C_HandleTypeDef*)&hi2c1;
-}
+
 /* USER CODE END 4 */
 
 /**

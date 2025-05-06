@@ -3,6 +3,8 @@
 extern void Error_Handler(void);
 extern struct bmp388_interface bmp388_intf;
 
+static BMP3_INTF_RET_TYPE get_bmp388_sensor_data(struct bmp3_dev*);
+
 static volatile uint32_t counter = 0U;
 
 BMP3_INTF_RET_TYPE bmp388_read(uint8_t reg_addr, uint8_t *read_data, uint32_t len, void *intf_ptr)
@@ -22,6 +24,8 @@ BMP3_INTF_RET_TYPE bmp388_write(uint8_t reg_addr, const uint8_t *read_data, uint
 void delay_us(uint32_t period, void *intf_ptr)
 {
 	struct bmp388_interface *intf = (struct bmp388_interface *)intf_ptr;
+
+	intf_ptr = (struct bmp388_interface *)intf_ptr;
 
 	HAL_TIM_Base_Start_IT(intf->htim);
 
@@ -87,8 +91,20 @@ BMP3_INTF_RET_TYPE bmp388_interface_init(struct bmp3_dev *bmp388,struct bmp388_i
 	settings.press_en = BMP3_ENABLE;
 	settings.temp_en = BMP3_ENABLE;
 
-	settings.odr_filter.iir_filter = BMP3_IIR_FILTER_COEFF_63; //BMP3_IIR_FILTER_COEFF_3
-	settings.odr_filter.press_os = BMP3_OVERSAMPLING_2X;
+	/*
+	 * @brief
+	 * Recommended filter settings based on use cases for Drone.
+	 * Standart Resolution for Oversampling Settings.
+	 * @params
+	 *		- OVERSAMPLING COEFF. FOR PRESSURE 			- x8		- BMP3_OVERSAMPLING_8X
+	 *		- OVERSAMPLING COEFF. FOR TEMPERATURE 		- x1		- BMP3_NO_OVERSAMPLING
+	 *		- IIR FILTER COEFFICIENT 3					- 2			- BMP3_IIR_FILTER_COEFF_3
+	 *		- ODR 										- 50Hz		- BMP3_ODR_50_HZ
+	 *		- RMS NOISE[cm]								- 11
+	 */
+
+	settings.odr_filter.iir_filter = BMP3_IIR_FILTER_COEFF_3;
+	settings.odr_filter.press_os = BMP3_OVERSAMPLING_8X;
 	settings.odr_filter.temp_os = BMP3_NO_OVERSAMPLING;
 	settings.odr_filter.odr = BMP3_ODR_50_HZ;
 
@@ -114,17 +130,15 @@ BMP3_INTF_RET_TYPE bmp388_interface_init(struct bmp3_dev *bmp388,struct bmp388_i
 		Error_Handler();
 	}
 
-	printf("BMP388 sensor op mode failure !\n");
-
-	HAL_Delay(4000);
+	printf("BMP388 sensor op mode success !\n");
 
 	return ( BMP3_INTF_RET_SUCCESS );
 
 }
 
-BMP3_INTF_RET_TYPE get_bmp388_sensor_data(struct bmp3_dev *bmp388,struct bmp3_data *bmp388_data)
+static BMP3_INTF_RET_TYPE get_bmp388_sensor_data(struct bmp3_dev *bmp388)
 {
-	if( ( bmp388 == NULL ) || ( bmp388_data == NULL ) )
+	if( ( bmp388 == NULL ) )
 	{
 		Error_Handler();
 	}
@@ -149,7 +163,7 @@ BMP3_INTF_RET_TYPE get_bmp388_sensor_data(struct bmp3_dev *bmp388,struct bmp3_da
 		   * BMP3_TEMP       : To read only temperature data
 		   * BMP3_PRESS      : To read only pressure data
 		   */
-		  rslt = bmp3_get_sensor_data(BMP3_PRESS_TEMP, bmp388_data , bmp388);
+		  rslt = bmp3_get_sensor_data(BMP3_PRESS_TEMP, &bmp388->pressure_data , bmp388);
 
 		  if ( rslt !=  BMP3_OK )
 		  {
@@ -170,104 +184,75 @@ BMP3_INTF_RET_TYPE get_bmp388_sensor_data(struct bmp3_dev *bmp388,struct bmp3_da
 	return ( BMP3_INTF_RET_SUCCESS );
 }
 
-BMP3_INTF_RET_TYPE bmp388_calibration(struct bmp3_dev *bmp388,struct bmp3_data *bmp388_data,uint32_t sample_count)
+BMP3_INTF_RET_TYPE bmp388_calibration(struct bmp3_dev *bmp388,uint32_t sample_count)
 {
-	if( ( bmp388 == NULL ) || ( bmp388_data == NULL ) || ( sample_count <= 0U) )
+	if( ( bmp388 == NULL ) || ( sample_count <= 0U ) )
 	{
 		Error_Handler();
 	}
 
+	/*!< Pressure Calibration >!*/
 	uint32_t iter = 0U;
 	double calibration_data = 0.0f;
-	double LowPassFilteredData = 0.0f;
-
 
 	while ( iter++ < sample_count )
 	{
-		if ( get_bmp388_sensor_data(bmp388,bmp388_data) != BMP3_OK )
+		if ( get_bmp388_sensor_data(bmp388) != BMP3_OK )
 		{
 			  printf("BMP388 sensor get data failure !\n");
 			  Error_Handler();
 		}
 
-		LowPassFilteredData = LPF_BAR_ALPHA * LowPassFilteredData + (1.0f - LPF_BAR_ALPHA) * bmp388_data->pressure;
-
-		calibration_data += LowPassFilteredData;
-
+		calibration_data += bmp388->pressure_data.pressure;
 	}
 
-	calibration_data /= (double)sample_count;
+	calibration_data /= (double)iter;
 
-	//bmp388_data->altitude[1] = - (LowPassFilteredData - calibration_data) / (DENSITY_AIR_KG_M3 * GRAVITY_AIR_KG_MPS2)/1000;
-	return ( BMP3_INTF_RET_SUCCESS );
-}
+	bmp388->pressure_data.ground_pressure = calibration_data;
 
+	/*!< Relativity Altitude Offset Calculation >!*/
+	bmp388->pressure_data.relative_offset = 0.0f;
+	iter = 0.0f;
 
-BMP3_INTF_RET_TYPE get_bmp388_altitude_data(struct bmp3_data *bmp388_data)
-{
-//	static char key = 1U;
-//
-//	if ( bmp388_data == NULL )
-//	{
-//		Error_Handler();
-//	}
+	while ( iter++ < sample_count )
+	{
+		if ( get_bmp388_sensor_data(bmp388) != BMP3_OK )
+		{
+			  printf("BMP388 sensor get data failure !\n");
+			  Error_Handler();
+		}
 
-//	if ( key )
-//	{
-//		/*! @brief variable to hold the reference altitude value  */
-//		bmp388_data->altitude[0] = 44330.0f * (1.0f - powf((bmp388_data->pressure / SEA_LEVEL_PRESSURE), 0.19029495718f));
-//		key = 0U;
-//	}
-//
-//	/*! @brief variable to hold the current altitude value  */
-//	bmp388_data->altitude[1] = 44330.0f * (1.0f - powf((bmp388_data->pressure / SEA_LEVEL_PRESSURE), 0.19029495718f));
-//
-//	/*! @brief variable to hold the current z axis value  */
-//	bmp388_data->altitude[2] = fabs ( bmp388_data->altitude[1] - bmp388_data->altitude[0] );
+		bmp388->pressure_data.relative_offset += -((bmp388->pressure_data.pressure-bmp388->pressure_data.ground_pressure) / (DENSITY_AIR_KG_M3 * GRAVITY_AIR_KG_MPS2));
+	}
+
+	bmp388->pressure_data.relative_offset /= (double)iter;
 
 	return ( BMP3_INTF_RET_SUCCESS );
 }
 
-double median_filter(double input_signal[],uint32_t signal_len)
+
+BMP3_INTF_RET_TYPE bmp388_get_altitude(struct bmp3_dev *bmp388,double alpha)
 {
-	if ( ( signal_len == 0 ) && ( signal_len < 0 ) )
+	if ( bmp388 == NULL )
 	{
 		Error_Handler();
 	}
+	static double LowPassFilteredData = 0.0f;
 
-	double sum = 0.0f;
-	uint32_t temp = 0;
-	temp = signal_len;
+    if ( get_bmp388_sensor_data(bmp388) != BMP3_OK)
+    {
+    	Error_Handler();
+    }
 
-	while ( --signal_len > 0 )
-	{
-		sum += input_signal[signal_len];
-	}
+	/*!< Low-Pass Filter 'raw' pressure measurement >!*/
+	LowPassFilteredData = (alpha * LowPassFilteredData) + ( (1.0f - alpha) * bmp388->pressure_data.pressure );
 
-	signal_len = temp;
+	/*!< Compute altitude (relative to initial level) >!*/
+	bmp388->pressure_data.relative_altitude = (-(LowPassFilteredData-bmp388->pressure_data.ground_pressure) /\
+									 (DENSITY_AIR_KG_M3 * GRAVITY_AIR_KG_MPS2) - bmp388->pressure_data.relative_offset );
 
-	sum = sum / (double) signal_len;
-
-	return ( sum );
+	return ( BMP3_INTF_RET_SUCCESS );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

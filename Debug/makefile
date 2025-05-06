@@ -19,6 +19,7 @@ RM := rm -rf
 -include SensorLibrary/bmi160/Src/subdir.mk
 -include SensorLibrary/HMC5883L/Src/subdir.mk
 -include SensorFusionLibrary/MadgwickAHRS/Src/subdir.mk
+-include SensorFusionLibrary/KalmanFilter1D/Src/subdir.mk
 -include SensorFusionLibrary/ComplementaryFilter/Src/subdir.mk
 -include RCFilter/Src/subdir.mk
 -include QuadcopterModel/subdir.mk

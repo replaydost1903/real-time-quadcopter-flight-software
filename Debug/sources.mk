@@ -33,6 +33,7 @@ Middlewares/ST/STM32_USB_Device_Library/Core/Src \
 QuadcopterModel \
 RCFilter/Src \
 SensorFusionLibrary/ComplementaryFilter/Src \
+SensorFusionLibrary/KalmanFilter1D/Src \
 SensorFusionLibrary/MadgwickAHRS/Src \
 SensorLibrary/HMC5883L/Src \
 SensorLibrary/bmi160/Src \

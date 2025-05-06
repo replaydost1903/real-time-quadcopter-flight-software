@@ -35,6 +35,7 @@
 "./QuadcopterModel/QuadcopterModel_data.o"
 "./RCFilter/Src/RCFilter.o"
 "./SensorFusionLibrary/ComplementaryFilter/Src/complementary.o"
+"./SensorFusionLibrary/KalmanFilter1D/Src/KalmanFilter1D.o"
 "./SensorFusionLibrary/MadgwickAHRS/Src/MadgwickAHRS.o"
 "./SensorLibrary/HMC5883L/Src/hmc5883l.o"
 "./SensorLibrary/bmi160/Src/bmi160.o"

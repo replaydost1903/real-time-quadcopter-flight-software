@@ -27,11 +27,9 @@ struct bmp388_interface
 BMP3_INTF_RET_TYPE bmp388_read(uint8_t reg_addr, uint8_t *read_data, uint32_t len, void *intf_ptr);
 BMP3_INTF_RET_TYPE bmp388_write(uint8_t reg_addr, const uint8_t *read_data, uint32_t len,void *intf_ptr);
 BMP3_INTF_RET_TYPE bmp388_interface_init(struct bmp3_dev*,struct bmp388_interface*);
-BMP3_INTF_RET_TYPE get_bmp388_sensor_data(struct bmp3_dev*,struct bmp3_data*);
-BMP3_INTF_RET_TYPE get_bmp388_altitude_data(struct bmp3_data*);
+BMP3_INTF_RET_TYPE bmp388_get_altitude(struct bmp3_dev*,double alpha);
 void delay_us(uint32_t period, void *intf_ptr);
-double median_filter(double input_signal[],uint32_t signal_len);
-BMP3_INTF_RET_TYPE bmp388_calibration(struct bmp3_dev *bmp388,struct bmp3_data *bmp388_data,uint32_t sample_count);
+BMP3_INTF_RET_TYPE bmp388_calibration(struct bmp3_dev *bmp388,uint32_t sample_count);
 
 
 

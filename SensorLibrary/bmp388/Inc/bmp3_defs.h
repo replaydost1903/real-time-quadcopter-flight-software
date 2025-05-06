@@ -832,6 +832,15 @@ struct bmp3_data
     /*! Compensated pressure */
     double pressure;
 
+    /*! Ground pressure	level (Pa) */
+    double ground_pressure;
+
+    /*! Current estimate altitude offset value (m) */
+    double relative_offset;
+
+    /*! Current estimate altitude (relative to initial level) (m) */
+    double relative_altitude;
+
 };
 
 #else

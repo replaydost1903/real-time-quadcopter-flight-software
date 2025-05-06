@@ -1,0 +1,2 @@
+../SensorFusionLibrary/KalmanFilter1D/Src/KalmanFilter1D.c:5:6:Kalman1D_Init	16	static
+../SensorFusionLibrary/KalmanFilter1D/Src/KalmanFilter1D.c:21:6:Kalman1D_Update	16	static

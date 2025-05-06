@@ -101,7 +101,7 @@
 ../SensorLibrary/bmi160/Src/bmi160.c:5033:15:config_high_g_int_settg	24	static
 ../SensorLibrary/bmi160/Src/bmi160.c:5062:15:config_int_out_ctrl	32	static
 ../SensorLibrary/bmi160/Src/bmi160.c:5124:15:config_int_latch	32	static
-../SensorLibrary/bmi160/Src/bmi160.c:5170:15:perform_accel_self_test	48	static
+../SensorLibrary/bmi160/Src/bmi160.c:5170:15:perform_accel_self_test	152	static
 ../SensorLibrary/bmi160/Src/bmi160.c:5200:15:enable_accel_self_test	24	static
 ../SensorLibrary/bmi160/Src/bmi160.c:5225:15:accel_self_test_positive_excitation	24	static
 ../SensorLibrary/bmi160/Src/bmi160.c:5247:15:accel_self_test_negative_excitation	24	static
