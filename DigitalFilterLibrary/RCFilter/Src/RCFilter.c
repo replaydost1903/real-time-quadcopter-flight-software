@@ -1,9 +1,6 @@
 #include "RCFilter.h"
 
-#include "RCFilter.h"
-
-void RCFilter_Init(RCFilter *filt, float cutoffFreqHz, float sampleTimeS)
-{
+void RCFilter_Init(RCFilter *filt, float cutoffFreqHz, float sampleTimeS) {
 
 	/* Compute equivalent 'RC' constant from cut-off frequency */
 	float RC = 1.0f / (6.28318530718f * cutoffFreqHz);
@@ -18,8 +15,7 @@ void RCFilter_Init(RCFilter *filt, float cutoffFreqHz, float sampleTimeS)
 
 }
 
-float RCFilter_Update(RCFilter *filt, float inp)
-{
+float RCFilter_Update(RCFilter *filt, float inp) {
 
 	/* Shift output samples */
 	filt->out[1] = filt->out[0];

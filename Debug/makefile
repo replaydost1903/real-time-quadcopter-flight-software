@@ -21,13 +21,14 @@ RM := rm -rf
 -include SensorFusionLibrary/MadgwickAHRS/Src/subdir.mk
 -include SensorFusionLibrary/KalmanFilter1D/Src/subdir.mk
 -include SensorFusionLibrary/ComplementaryFilter/Src/subdir.mk
--include RCFilter/Src/subdir.mk
 -include QuadcopterModel/subdir.mk
 -include Middlewares/ST/STM32_USB_Device_Library/Core/Src/subdir.mk
 -include Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/subdir.mk
 -include FligthControl/Src/subdir.mk
 -include FlightInterfaceParser/Src/subdir.mk
 -include Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
+-include DigitalFilterLibrary/RCFilter/Src/subdir.mk
+-include DigitalFilterLibrary/FIRFilter/Src/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
 -include ControllerDriver/pid/Src/subdir.mk

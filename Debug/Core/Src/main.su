@@ -1,7 +1,10 @@
-../Core/Src/main.c:106:5:main	8	static
-../Core/Src/main.c:258:6:SystemClock_Config	88	static
-../Core/Src/main.c:304:13:MX_I2C1_Init	8	static
-../Core/Src/main.c:338:13:MX_TIM2_Init	48	static
-../Core/Src/main.c:387:13:MX_TIM6_Init	16	static
-../Core/Src/main.c:425:13:MX_GPIO_Init	48	static
-../Core/Src/main.c:467:6:Error_Handler	8	static,ignoring_inline_asm
+../Core/Src/main.c:141:6:Kalman_Init	16	static
+../Core/Src/main.c:154:7:Kalman_Update	48	static
+../Core/Src/main.c:189:6:IMU_Update	64	static
+../Core/Src/main.c:210:5:main	24	static
+../Core/Src/main.c:360:6:SystemClock_Config	88	static
+../Core/Src/main.c:406:13:MX_I2C1_Init	8	static
+../Core/Src/main.c:440:13:MX_TIM2_Init	48	static
+../Core/Src/main.c:489:13:MX_TIM6_Init	16	static
+../Core/Src/main.c:527:13:MX_GPIO_Init	48	static
+../Core/Src/main.c:569:6:Error_Handler	8	static,ignoring_inline_asm

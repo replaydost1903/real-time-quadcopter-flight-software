@@ -22,25 +22,43 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
+/* @brief standard c libraries */
 #include <string.h>
 #include <stdio.h>
-#include "complementary.h"
+
+/* @brief sensor libraries */
 #include "bmi160_port.h"
 #include "bmi160.h"
 #include "bmp3.h"
 #include "bmp3_selftest.h"
 #include "bmp388_port.h"
+#include "hmc5883l.h"
+
+/* @brief controller libraries */
 #include "pid.h"
-#include "usbd_cdc_if.h"
+
+/* @brief quadcopter model libraries */
 #include "rtwtypes.h"
 #include "QuadcopterModel.h"
-#include "hmc5883l.h"
+
+/* @brief state estimation for quadcopter attitude libraries */
+#include "complementary.h"
 #include "MadgwickAHRS.h"
-#include "RCFilter.h"
 #include "KalmanFilter1D.h"
-//#include "FreeRTOS.h"
-//#include "task.h"
-//#include "task_handles.h"
+
+/* @brief hal libraries */
+#include "usbd_cdc_if.h"
+
+/* @brief digital filter libraries */
+#include "RCFilter.h"
+#include "FIRFilter.h"
+
+/* @brief real time kernel libraries */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "task_handles.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +68,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ALPHA					( ( double )( 0.95f ) )
+#define ALPHA					( ( double )( 0.98f ) )
 #define DEGREES_TO_RADIAN		(( double )((M_PI / 180.0f)))
 #define RADIAN_TO_DEGREES		(( double )((180.0f / M_PI)))
 /* USER CODE END PD */
@@ -93,10 +111,96 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN 0 */
 char usb_msg[200] = {0};
 float filtered_ax_f=0.0f,filtered_ay_f=0.0f,filtered_az_f=0.0f,filtered_gx_f=0.0f,filtered_gy_f=0.0f,filtered_gz_f=0.0f;
-float ax_f=0.0f,ay_f=0.0f,az_f=0.0f,gx_f=0.0,gy_f=0.0f,gz_f=0.0f;
+float ax_f = 0.0f,ay_f = 0.0f,az_f = 0.0f,gx_f = 0.0,gy_f = 0.0f,gz_f = 0.0f;
 float gx_f_rad=0.0f,gy_f_rad=0.0f,gz_f_rad=0.0f;
 float roll=0.0f,pitch=0.0f,yaw=0.0f;
-float nonfilteredval = 0.0f , dynamic_alpha = 0.90f;
+
+// Zaman adımı (örneğin 0.01s = 100 Hz)
+#define DT 0.01f
+#define RAD_TO_DEG 57.2957795f
+
+typedef struct
+{
+    float angle;       // Açının kendisi
+    float bias;        // Jiroskop bias'ı
+    float rate;        // Ölçülen jiroskop değeri
+
+    float P[2][2];     // Hata kovaryans matrisi
+    float Q_angle;     // Açı için proses gürültüsü kovaryansı
+    float Q_bias;      // Bias için proses gürültüsü kovaryansı
+    float R_measure;   // Ölçüm gürültüsü kovaryansı
+
+} Kalman_t;
+
+
+Kalman_t kalmanRoll, kalmanPitch;
+
+RCFilter roll_lowpass,pitch_lowpass;
+
+// Kalman filtresini başlat
+void Kalman_Init(Kalman_t *k) {
+    k->angle = 0.0f;
+    k->bias = 0.0f;
+    k->P[0][0] = 0.0f;
+    k->P[0][1] = 0.0f;
+    k->P[1][0] = 0.0f;
+    k->P[1][1] = 0.0f;
+    k->Q_angle = 0.001f;
+    k->Q_bias = 0.003f;
+    k->R_measure = 0.03f;
+}
+
+// Kalman filtre güncellemesi
+float Kalman_Update(Kalman_t *k, float newAngle, float newRate, float dt) {
+    // Prediction
+    k->rate = newRate - k->bias;
+    k->angle += dt * k->rate;
+
+    // Update error covariance matrix
+    k->P[0][0] += dt * (dt * k->P[1][1] - k->P[0][1] - k->P[1][0] + k->Q_angle);
+    k->P[0][1] -= dt * k->P[1][1];
+    k->P[1][0] -= dt * k->P[1][1];
+    k->P[1][1] += k->Q_bias * dt;
+
+    // Innovation
+    float y = newAngle - k->angle;
+    float S = k->P[0][0] + k->R_measure;
+    float K[2];
+    K[0] = k->P[0][0] / S;
+    K[1] = k->P[1][0] / S;
+
+    // Update estimates
+    k->angle += K[0] * y;
+    k->bias += K[1] * y;
+
+    // Update error covariance matrix
+    float P00_temp = k->P[0][0];
+    float P01_temp = k->P[0][1];
+
+    k->P[0][0] -= K[0] * P00_temp;
+    k->P[0][1] -= K[0] * P01_temp;
+    k->P[1][0] -= K[1] * P00_temp;
+    k->P[1][1] -= K[1] * P01_temp;
+
+    return k->angle;
+}
+
+// Her döngüde sensör verilerini oku ve açıları hesapla
+void IMU_Update(float accX, float accY, float accZ, float gyroX, float gyroY, float gyroZ,
+                float* roll, float* pitch, float* yaw) {
+    // Accelerometer'dan açı tahmini (trigonometrik yöntem)
+    float accRoll  = atan2f(accY, accZ) * RAD_TO_DEG;
+    float accPitch = atan2f(-accX, sqrtf(accY * accY + accZ * accZ)) * RAD_TO_DEG;
+
+    // Kalman filtresi ile açı hesaplama
+    *roll  = Kalman_Update(&kalmanRoll, accRoll,  gyroX, DT);
+    *pitch = Kalman_Update(&kalmanPitch, accPitch, gyroY, DT);
+
+    // Yaw sadece jiroskoptan entegre edilir (drift olabilir)
+    *yaw += gyroZ * DT;
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -135,44 +239,38 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   /*!< Initialise bmi160 sensor >!*/
-//  if ( bmi160_interface_init(&bmi160) != BMI160_OK)
-//  {
-//	  printf("BMI160 not initialised !\n");
-//	  Error_Handler();
-//  }
+  if ( bmi160_interface_init(&bmi160) != BMI160_OK)
+  {
+	  printf("BMI160 not initialised !\n");
+	  Error_Handler();
+  }
 
   /*!< Calibration process for bmi160 sensor >!*/
-//  if ( bmi160_calibration(&bmi160,3000U) != BMI160_OK)
-//  {
-//	  printf("BMI160 not initialised !\n");
-//	  Error_Handler();
-//  }
+  if ( bmi160_calibration(&bmi160,3000U) != BMI160_OK)
+  {
+	  printf("BMI160 not initialised !\n");
+	  Error_Handler();
+  }
 
-//  Kalman_Init(&kalmanRoll);
-//  Kalman_Init(&kalmanPitch);
-//
-//  RCFilter roll_lowpass,pitch_lowpass;
-//
-//  RCFilter_Init(&roll_lowpass, 5.0f,0.02f);
-//  RCFilter_Init(&pitch_lowpass, 5.0f,0.02f);
-//
-//  // Filtrelenmiş ivme verileri
-//  float ax_f = 0.0f, ay_f = 0.0f, az_f = 0.0f;
-//
-//  // Filtrelenmiş gyro verileri
-//  float gx_f = 0.0f, gy_f = 0.0f, gz_f = 0.0f;
+  /*!< Initialise bmp388 sensor >!*/
+  if ( bmp388_interface_init(&bmp388, &bmp388_intf) != BMP3_OK )
+  {
+	  Error_Handler();
+  }
 
-//  /*!< Initialise bmp388 sensor >!*/
-//  if ( bmp388_interface_init(&bmp388, &bmp388_intf) != BMP3_OK )
-//  {
-//	  Error_Handler();
-//  }
-//
-//  /*!< Calibration process for bmp388 sensor >!*/
-//  if ( bmp388_calibration(&bmp388, 1000U) != BMP3_OK )
-//  {
-//	  Error_Handler();
-//  }
+  /*!< Calibration process for bmp388 sensor >!*/
+  if ( bmp388_calibration(&bmp388, 1000U) != BMP3_OK )
+  {
+	  Error_Handler();
+  }
+
+  /*!< Initialise for IMU Kalman Filter  >!*/
+  Kalman_Init(&kalmanRoll);
+  Kalman_Init(&kalmanPitch);
+
+  /*!< Low-pass filter for IMU raw gyro and acc data  >!*/
+  RCFilter_Init(&roll_lowpass, 5.0f,0.02f);
+  RCFilter_Init(&pitch_lowpass, 5.0f,0.02f);
 
   /* USER CODE END 2 */
 
@@ -181,68 +279,72 @@ int main(void)
   while (1)
   {
 	  /*!< Get calibrated data for bmi160 sensor >!*/
-//	  if ( bmi160_get_acc_gyro(&bmi160) != BMI160_OK)
-//	  {
-//		  printf("BMI160 isnt get data !\n");
-//		  Error_Handler();
-//	  }
-
-	  /*!< Convert int16_t to float data types >!*/
-//	  ax_f = bmi160.accel_data.xd;
-//	  ay_f = bmi160.accel_data.yd;
-//	  az_f = bmi160.accel_data.zd;
-//	  gx_f = bmi160.gyro_data.xd;
-//	  gy_f = bmi160.gyro_data.yd;
-//	  gz_f = bmi160.gyro_data.zd;
-
-	  /*!< First-order simple low-pass low-pass filter applied to 3-axis accelerometer data >!*/
-	  //filtered_ax_f = ALPHA * filtered_ax_f + (1 - ALPHA) * (bmi160.accel_data.xd);
-	  //filtered_ay_f = ALPHA * filtered_ay_f + (1 - ALPHA) * (bmi160.accel_data.yd);
-	  //filtered_az_f = ALPHA * filtered_az_f + (1 - ALPHA) * (bmi160.accel_data.zd);
-
-	  /*!< First-order simple low-pass low-pass filter applied to 3-axis gyroscope data >!*/
-	  //filtered_gx_f = ALPHA * filtered_gx_f + (1 - ALPHA) * (bmi160.gyro_data.xd);
-	  //filtered_gy_f = ALPHA * filtered_gy_f + (1 - ALPHA) * (bmi160.gyro_data.yd);
-	  //filtered_gz_f = ALPHA * filtered_gz_f + (1 - ALPHA) * (bmi160.gyro_data.zd);
-
-	  /*!< (°/s) data converted to (rad/s) for angular velocity >!*/
-	  //gx_f_rad = filtered_gx_f * DEGREES_TO_RADIAN;
-	  // gy_f_rad = filtered_gy_f * DEGREES_TO_RADIAN;
-	  //gz_f_rad = filtered_gz_f * DEGREES_TO_RADIAN;
-
-	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",ax_f,ay_f,az_f,filtered_ax_f,filtered_ay_f,filtered_az_f);
-	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",gx_f,gy_f,gz_f,filtered_gx_f,filtered_gy_f,filtered_gz_f);
-	  //CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
-
-	  //IMU_Update(filtered_ax_f/9.81f, filtered_ay_f/9.81f, filtered_az_f/9.81f, gx_f_rad, gy_f_rad, gz_f_rad, &roll, &pitch, &yaw);
-
-	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",ax_f,ay_f,az_f,filtered_ax_f,filtered_ay_f,filtered_az_f);
-	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",gx_f,gy_f,gz_f,filtered_gx_f,filtered_gy_f,filtered_gz_f);
-      //sprintf(usb_msg,"%f,%f\r\n",pitch,roll);
-	  //sprintf(usb_msg,"%f,%f,%f,%f\r\n",q0,q1,q2,q3);
-      //sprintf(usb_msg,"Orientation: %.2f %.2f %.2f\r\n",roll,pitch,yaw);
-      //CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
-
+	  if ( bmi160_get_acc_gyro(&bmi160) != BMI160_OK)
+	  {
+		  printf("BMI160 isnt get data !\n");
+		  Error_Handler();
+	  }
 
 	  /*!< Get calibrated data for bmp388 sensor >!*/
-//	  if ( bmp388_get_altitude(&bmp388, ALPHA) != BMP3_OK )
-//	  {
-//		  Error_Handler();
-//	  }
-//
-//	  sprintf(usb_msg,"%f\r\n",(float)bmp388.pressure_data.relative_altitude);
-//
-//	  CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
+	  if ( bmp388_get_altitude(&bmp388, ALPHA) != BMP3_OK )
+	  {
+		  printf("BMP388 isnt get data !\n");
+		  Error_Handler();
+	  }
 
-	  //sprintf(usb_msg,"Orientation: %.2f %.2f %.2f\r\n",roll,pitch,yaw);
+	  /*!< Convert int16_t to float data types >!*/
+	  ax_f = bmi160.accel_data.xd;
+	  ay_f = bmi160.accel_data.yd;
+	  az_f = bmi160.accel_data.zd;
+	  gx_f = bmi160.gyro_data.xd;
+	  gy_f = bmi160.gyro_data.yd;
+	  gz_f = bmi160.gyro_data.zd;
+
+	  /*!< First-order simple low-pass low-pass filter applied to 3-axis accelerometer data >!*/
+	  filtered_ax_f = ALPHA * filtered_ax_f + (1 - ALPHA) * (bmi160.accel_data.xd);
+	  filtered_ay_f = ALPHA * filtered_ay_f + (1 - ALPHA) * (bmi160.accel_data.yd);
+	  filtered_az_f = ALPHA * filtered_az_f + (1 - ALPHA) * (bmi160.accel_data.zd);
+
+	  /*!< First-order simple low-pass low-pass filter applied to 3-axis gyroscope data >!*/
+	  filtered_gx_f = ALPHA * filtered_gx_f + (1 - ALPHA) * (bmi160.gyro_data.xd);
+	  filtered_gy_f = ALPHA * filtered_gy_f + (1 - ALPHA) * (bmi160.gyro_data.yd);
+	  filtered_gz_f = ALPHA * filtered_gz_f + (1 - ALPHA) * (bmi160.gyro_data.zd);
+
+	  /*!< (°/s) data converted to (rad/s) for angular velocity >!*/
+	  gx_f_rad = filtered_gx_f * DEGREES_TO_RADIAN;
+	  gy_f_rad = filtered_gy_f * DEGREES_TO_RADIAN;
+	  gz_f_rad = filtered_gz_f * DEGREES_TO_RADIAN;
+
+	  /*!< IMU kalman >!*/
+	  IMU_Update(filtered_ax_f/9.81f, filtered_ay_f/9.81f, filtered_az_f/9.81f,\
+			  	  	  gx_f_rad, gy_f_rad, gz_f_rad, &roll, &pitch, &yaw);
+
+	  /*!< Fixed frame +x position [0,90] >!*/
+	  if ( ( pitch >= 80.0f ) && ( pitch <= 90.0f ) )
+	  {
+		  pitch = 0.0f;
+		  roll = 0.0f;
+		  yaw = 0.0f;
+	  }
+
+	  /*!< Fixed frame -x position [0,-90] >!*/
+	  if ( ( pitch <= -80.0f ) && ( pitch >= -90.0f ) )
+	  {
+		  pitch = 0.0f;
+		  roll = 0.0f;
+		  yaw = 0.0f;
+	  }
+
+	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",ax_f,ay_f,az_f,filtered_ax_f,filtered_ay_f,filtered_az_f);
+	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",gx_f,gy_f,gz_f,filtered_gx_f,filtered_gy_f,filtered_gz_f);
 
 
-
-
-
-
-
-
+	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",ax_f,ay_f,az_f,filtered_ax_f,filtered_ay_f,filtered_az_f);
+	  //sprintf(usb_msg,"%f,%f,%f,%f,%f,%f\r\n",gx_f,gy_f,gz_f,filtered_gx_f,filtered_gy_f,filtered_gz_f);
+      sprintf(usb_msg,"%f,%f\r\n",roll,pitch);
+	  //sprintf(usb_msg,"%f,%f,%f,%f\r\n",q0,q1,q2,q3);
+      //sprintf(usb_msg,"Orientation: %.2f %.2f %.2f\r\n",-roll,pitch,yaw);
+      CDC_Transmit_FS((uint8_t*)usb_msg,strlen(usb_msg));
 
     /* USER CODE END WHILE */
 

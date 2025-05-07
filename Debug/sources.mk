@@ -25,13 +25,14 @@ SUBDIRS := \
 ControllerDriver/pid/Src \
 Core/Src \
 Core/Startup \
+DigitalFilterLibrary/FIRFilter/Src \
+DigitalFilterLibrary/RCFilter/Src \
 Drivers/STM32F4xx_HAL_Driver/Src \
 FlightInterfaceParser/Src \
 FligthControl/Src \
 Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src \
 QuadcopterModel \
-RCFilter/Src \
 SensorFusionLibrary/ComplementaryFilter/Src \
 SensorFusionLibrary/KalmanFilter1D/Src \
 SensorFusionLibrary/MadgwickAHRS/Src \
